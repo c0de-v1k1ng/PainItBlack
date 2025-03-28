@@ -1,0 +1,44 @@
+<HomeScreen@MDScreen>:
+    md_bg_color: self.theme_cls.backgroundColor  # ✅ Fix
+
+    MDBoxLayout:
+        orientation: "vertical"
+
+        MDTopAppBar:
+            type: "small"
+
+            #Menubar
+            MDTopAppBarLeadingButtonContainer:
+                MDActionTopAppBarButton:
+                    id: menu_button
+                    icon: "menu"
+                    on_release: root.show_menu()
+                MDIconButton:
+                    icon: "theme-light-dark"
+                    on_release: app.toggle_theme()
+            #Title
+            MDTopAppBarTitle:
+                text: "Animal Surveying App"
+                pos_hint: {"center_x":.5}
+
+            #ButtonsRight
+            MDTopAppBarTrailingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "clipboard-list"
+                    on_release: setattr(app.root, 'current', 'assessments')
+
+        ScrollView:
+            MDBoxLayout:
+                size_hint_y: 1
+                padding: dp(10)
+                spacing: dp(10)
+
+                MDGridLayout:
+                    id: species_grid
+                    cols: 4
+                    padding: dp(10)
+                    spacing: dp(10)
+                    height: self.minimum_height
+                    adaptive_height: True
+                    elevation: 4
+                    icon_size: "24dp"

@@ -1,0 +1,21 @@
+<AssessmentsScreen@MDScreen>:
+    md_bg_color: self.theme_cls.backgroundColor  # ✅ Fix
+
+    MDBoxLayout:
+        orientation: "vertical"
+
+        MDTopAppBar:
+            type: "small"
+
+            MDTopAppBarLeadingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "arrow-left"
+                    on_release: setattr(app.root, 'current', 'home')
+
+            MDTopAppBarTitle:
+                text: "Assessments"
+                pos_hint: {"center_x": .5}
+
+        ScrollView:
+            MDList:
+                id: assessments_list

@@ -1,0 +1,59 @@
+<SpeciesDetailScreen@MDScreen>:
+    md_bg_color: self.theme_cls.backgroundColor  # ✅ Fix
+
+    MDBoxLayout:
+        orientation: "vertical"
+
+        MDTopAppBar:
+            type: "small"
+
+            MDTopAppBarLeadingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "arrow-left"
+                    on_release: setattr(app.root, 'current', 'home')
+
+            MDTopAppBarTitle:
+                text: "Species Details"
+                pos_hint: {"center_x": .5}
+
+        MDLabel:
+            id: species_title
+            text: "Species Name"
+            font_style: "Display"
+            role: "medium"
+            halign: "center"
+
+        ScrollView:
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: dp(10)
+                spacing: dp(10)
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDLabel:
+                    text: "Assessment Scales"
+                    font_style: "Display"
+                    role: "small"
+                    halign: "left"
+
+                MDList:
+                    id: assessment_list
+
+                MDLabel:
+                    text: "Manuals"
+                    font_style: "Display"
+                    role: "small"
+                    halign: "left"
+
+                MDList:
+                    id: manual_list
+
+                MDLabel:
+                    text: "Training Videos"
+                    font_style: "Display"
+                    role: "small"
+                    halign: "left"
+
+                MDList:
+                    id: video_list

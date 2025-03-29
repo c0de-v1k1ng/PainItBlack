@@ -31,6 +31,8 @@
                         id: animal_name
                         hint_text: "Animal Name"
                         mode: "outlined"
+                        MDTextFieldHintText:
+                            text: "Animal ID"
 
                     MDBoxLayout:
                         spacing: "12dp"
@@ -41,11 +43,15 @@
                             hint_text: "Species"
                             mode: "outlined"
                             on_focus: root.show_species_menu() if self.focus else None
+                            MDTextFieldHintText:
+                                text: "Species"
 
                         MDTextField:
                             id: animal_breed
                             hint_text: "Breed"
                             mode: "outlined"
+                            MDTextFieldHintText:
+                                text: "Breed"
 
                     MDBoxLayout:
                         spacing: "12dp"
@@ -56,12 +62,16 @@
                             hint_text: "Birthday"
                             mode: "outlined"
                             on_focus: root.show_date_picker(self)
+                            MDTextFieldHintText:
+                                text: "Birthdate"
 
                         MDTextField:
                             id: sex_dropdown
                             hint_text: "Sex"
                             mode: "outlined"
                             on_focus: root.show_sex_menu() if self.focus else None
+                            MDTextFieldHintText:
+                                text: "Sex"
 
                         MDBoxLayout:
                             orientation: "horizontal"
@@ -84,12 +94,16 @@
                             hint_text: "Weight"
                             mode: "outlined"
                             input_filter: "float"
+                            MDTextFieldHintText:
+                                text: "Weight"
 
                         MDTextField:
                             id: weight_unit
                             hint_text: "Unit"
                             mode: "outlined"
                             on_focus: root.show_weight_unit_menu() if self.focus else None
+                            MDTextFieldHintText:
+                                text: "Unit"
 
                     MDBoxLayout:
                         spacing: "12dp"

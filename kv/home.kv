@@ -4,24 +4,19 @@
     MDBoxLayout:
         orientation: "vertical"
 
-        MDTopAppBar:
-            type: "small"
-            title: "Animal Surveying App"
-            # No need for left menu button anymore
-            elevation: 0
+
 
         ScrollView:
             MDBoxLayout:
-                size_hint_y: 1
                 padding: dp(10)
                 spacing: dp(10)
+                adaptive_size: True
 
                 MDGridLayout:
                     id: species_grid
                     cols: 4
                     padding: dp(10)
                     spacing: dp(10)
-                    height: self.minimum_height
-                    adaptive_height: True
+                    adaptive_size: True
                     elevation: 4
                     icon_size: "24dp"

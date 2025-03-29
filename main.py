@@ -79,9 +79,6 @@ class MainApp(MDApp):
         item.active = True
         self.active_nav_item = item
 
-    def toggle_nav_drawer(self):
-        """Future implementation of a navigation drawer."""
-        print("Navigation drawer toggled (not implemented)")
 
     def toggle_theme(self):
         """Toggle between Light and Dark mode dynamically."""

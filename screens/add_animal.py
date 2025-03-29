@@ -150,7 +150,6 @@ class AddAnimalScreen(MDScreen):
             self.ids.photo_preview.source = self.selected_image_path
         self.file_dialog.dismiss()
 
-
     def save_animal(self):
         """Save new animal entry to the database."""
         name = self.ids.animal_name.text.strip()
@@ -185,10 +184,19 @@ class AddAnimalScreen(MDScreen):
         self.reset_form()
         self.show_confirmation("Animal saved successfully!")
 
-        # Navigate back to My Animals
-        app = self.manager.get_parent_window().children[0]
-        app.switch_screen('my_animals')
-        app.screen_manager.get_screen('my_animals').load_animals()
+        # Get the app instance more reliably
+        from kivymd.app import MDApp
+        app = MDApp.get_running_app()
+
+        # Schedule the navigation after the dialog is dismissed
+        def navigate_back(*args):
+            app.switch_screen('my_animals')
+            # Refresh the animals list
+            app.screen_manager.get_screen('my_animals').load_animals()
+
+        # Schedule navigation to happen after dialog is dismissed
+        from kivy.clock import Clock
+        Clock.schedule_once(navigate_back, 0.5)
 
     def reset_form(self):
         for field in [

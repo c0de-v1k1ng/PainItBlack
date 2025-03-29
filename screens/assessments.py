@@ -211,7 +211,7 @@ class AssessmentsScreen(MDScreen):
                 )
                 self.scale_menu.open()
 
-        scale_field.bind(focus=lambda instance, value: show_scale_menu(instance) if value else None)
+        scale_field.bind(focus=show_scale_menu)
         content.add_widget(scale_field)
 
         # Add result field

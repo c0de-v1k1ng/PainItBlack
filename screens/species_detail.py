@@ -1,6 +1,6 @@
 from kivy.uix.screenmanager import Screen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDButton
+from kivymd.uix.button import MDButton, MDButtonText
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.screen import MDScreen
 
@@ -26,25 +26,29 @@ class SpeciesDetailScreen(MDScreen):
 
         self.ids.species_title.text = str(species_name)
 
-        # ✅ Provide default empty lists if species is missing
+        # Provide default empty lists if species is missing
         data = self.species_data.get(species_name, {"assessment_scales": [], "manuals": [], "videos": []})
 
-        # ✅ Clear existing widgets before adding new ones
+        # Clear existing widgets before adding new ones
         self.ids.assessment_list.clear_widgets()
         self.ids.manual_list.clear_widgets()
         self.ids.video_list.clear_widgets()
 
-        # ✅ Add assessment scales
+        # Add assessment scales
         for scale in data["assessment_scales"]:
             self.ids.assessment_list.add_widget(MDLabel(text=scale, halign="left"))
 
-        # ✅ Add manuals
+        # Add manuals
         for manual in data["manuals"]:
             self.ids.manual_list.add_widget(MDLabel(text=manual, halign="left"))
 
-        # ✅ Add video links as buttons
+        # Add video links as buttons - FIXED VERSION
         for video in data["videos"]:
-            video_button = MDButton(style="elevated", text="Watch Video", on_release=lambda x=video: self.open_video(x))
+            video_button = MDButton(
+                style="elevated",
+                on_release=lambda x, v=video: self.open_video(v)
+            )
+            video_button.add_widget(MDButtonText(text="Watch Video"))
             self.ids.video_list.add_widget(video_button)
 
     def open_video(self, video_url):

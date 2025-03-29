@@ -57,6 +57,7 @@ def create_tables():
 # Animal CRUD Operations
 def add_animal(name, species, breed, birthday, sex, castrated, weight, image_path):
     """Add a new animal to the database."""
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -68,14 +69,23 @@ def add_animal(name, species, breed, birthday, sex, castrated, weight, image_pat
 
         # Add initial weight record to history
         today = datetime.now().strftime("%Y-%m-%d")
-        add_weight_record(animal_id, today, weight)
+
+        # Add weight record using the same connection
+        cursor.execute(
+            "INSERT INTO weight_history (animal_id, date, weight) VALUES (?, ?, ?)",
+            (animal_id, today, weight)
+        )
 
         conn.commit()
-        conn.close()
         return animal_id
     except sqlite3.Error as e:
         print(f"Database error: {e}")
+        if conn:
+            conn.rollback()  # Rollback any changes if error occurs
         return None
+    finally:
+        if conn:
+            conn.close()  # Ensure connection is closed even if an exception occurs
 
 
 def get_animal(animal_id):

@@ -47,6 +47,7 @@ class AddAnimalScreen(MDScreen):
 
 
     def set_species(self, species):
+        self.selected_species = species
         self.ids.species_dropdown.text = species
 
 
@@ -59,6 +60,7 @@ class AddAnimalScreen(MDScreen):
         MDDropdownMenu(caller=self.ids.sex_dropdown, items=menu_items, width_mult=3).open()
 
     def set_sex(self, gender):
+        self.selected_sex = gender
         self.ids.sex_dropdown.text = gender
 
     def show_weight_unit_menu(self):
@@ -70,6 +72,7 @@ class AddAnimalScreen(MDScreen):
         MDDropdownMenu(caller=self.ids.weight_unit, items=menu_items, width_mult=3).open()
 
     def set_weight_unit(self, unit):
+        self.selected_unit = unit
         self.ids.weight_unit.text = unit
 
     def show_date_picker(self, field_widget):
@@ -101,6 +104,7 @@ class AddAnimalScreen(MDScreen):
             selected_date_list = instance.get_date()
             selected_date = selected_date_list[0]
             formatted_date = selected_date.strftime("%d.%m.%Y")
+            self.birthday_text = formatted_date
             self.ids.animal_birth_date.text = formatted_date
             instance.dismiss()
 
@@ -142,7 +146,7 @@ class AddAnimalScreen(MDScreen):
         selection = self.filechooser_view.selection
         if selection:
             self.selected_image_path = selection[0]
-            self.ids.photo_label.text = os.path.basename(self.selected_image_path)
+            # Update photo preview directly instead of using photo_label
             self.ids.photo_preview.source = self.selected_image_path
         self.file_dialog.dismiss()
 
@@ -154,7 +158,7 @@ class AddAnimalScreen(MDScreen):
         breed = self.ids.animal_breed.text.strip()
         birthday = self.birthday_text if self.birthday_text != "Select Date" else None
         sex = self.selected_sex
-        castrated = "Yes" if self.ids.castrated_checkbox.active else "No"
+        castrated = "Yes" if self.ids.animal_castrated.active else "No"
         weight = self.ids.animal_weight.text.strip()
         weight_unit = self.selected_unit
 
@@ -162,7 +166,11 @@ class AddAnimalScreen(MDScreen):
             self.show_error("Name/ID, Species, and Weight are required!")
             return
 
-        weight_in_kg = float(weight) if weight_unit == "kg" else float(weight) / 1000  # Convert g to kg
+        try:
+            weight_in_kg = float(weight) if weight_unit == "kg" else float(weight) / 1000  # Convert g to kg
+        except ValueError:
+            self.show_error("Weight must be a valid number!")
+            return
 
         # Save image in app directory
         image_save_path = ""
@@ -190,6 +198,10 @@ class AddAnimalScreen(MDScreen):
         self.ids.animal_castrated.active = False
         self.ids.photo_preview.source = ""
         self.selected_image_path = ""
+        self.selected_species = None
+        self.selected_sex = None
+        self.selected_unit = "kg"
+        self.birthday_text = "Select Date"
 
     def show_confirmation(self, message):
         self.dialog = MDDialog(

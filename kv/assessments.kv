@@ -19,3 +19,10 @@
         ScrollView:
             MDList:
                 id: assessments_list
+                padding: "8dp"
+
+        MDFabButton:
+            icon: "plus"
+            style: "standard"
+            pos_hint: {"center_x": 0.9, "center_y": 0.1}
+            on_release: root.show_new_assessment_dialog()

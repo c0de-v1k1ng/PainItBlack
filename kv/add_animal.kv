@@ -29,8 +29,9 @@
 
                     MDTextField:
                         id: animal_name
-                        hint_text: "Animal Name"
                         mode: "outlined"
+                        MDTextFieldHintText:
+                            text: "Animal ID"
 
                     MDBoxLayout:
                         spacing: "12dp"
@@ -38,14 +39,16 @@
 
                         MDTextField:
                             id: species_dropdown
-                            hint_text: "Species"
                             mode: "outlined"
                             on_focus: root.show_species_menu() if self.focus else None
+                            MDTextFieldHintText:
+                                text: "Species"
 
                         MDTextField:
                             id: animal_breed
-                            hint_text: "Breed"
                             mode: "outlined"
+                            MDTextFieldHintText:
+                                text: "Breed"
 
                     MDBoxLayout:
                         spacing: "12dp"
@@ -53,15 +56,17 @@
 
                         MDTextField:
                             id: animal_birth_date
-                            hint_text: "Birthday"
                             mode: "outlined"
                             on_focus: root.show_date_picker(self)
+                            MDTextFieldHintText:
+                                text: "Date of birth"
 
                         MDTextField:
                             id: sex_dropdown
-                            hint_text: "Sex"
                             mode: "outlined"
                             on_focus: root.show_sex_menu() if self.focus else None
+                            MDTextFieldHintText:
+                                text: "Sex"
 
                         MDBoxLayout:
                             orientation: "horizontal"
@@ -81,28 +86,33 @@
 
                         MDTextField:
                             id: animal_weight
-                            hint_text: "Weight"
                             mode: "outlined"
                             input_filter: "float"
+                            MDTextFieldHintText:
+                                text: "Weight"
 
                         MDTextField:
                             id: weight_unit
-                            hint_text: "Unit"
                             mode: "outlined"
                             on_focus: root.show_weight_unit_menu() if self.focus else None
+                            MDTextFieldHintText:
+                                text: "Unit"
 
                     MDBoxLayout:
                         spacing: "12dp"
                         adaptive_height: True
 
                         MDButton:
-                            text: "Choose Photo"
                             style: "elevated"
                             size_hint_y: None
                             height: "48dp"
                             font_size: "16sp"
                             text_color: [1,1,1,1]
                             on_release: root.show_file_chooser()
+                            MDButtonText:
+                                text: "Choose Photo"
+                            MDButtonIcon:
+                                icon: "file"
 
                         FitImage:
                             id: photo_preview
@@ -118,11 +128,17 @@
                 height: "64dp"
 
                 MDButton:
-                    text: "Save Animal"
                     style: "elevated"
                     on_release: root.save_animal()
+                    MDButtonText:
+                        text: "Save animal"
+                    MDButtonIcon:
+                        icon: "save"
 
                 MDButton:
-                    text: "Cancel"
                     style: "text"
                     on_release: app.go_back()
+                    MDButtonText:
+                        text: "Cancel"
+                    MDButtonIcon:
+                        icon: "cancel"

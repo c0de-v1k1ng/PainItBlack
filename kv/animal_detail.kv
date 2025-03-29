@@ -1,0 +1,150 @@
+<AnimalDetailScreen@MDScreen>:
+    md_bg_color: self.theme_cls.backgroundColor  # ✅ Fix
+
+    MDBoxLayout:
+        orientation: "vertical"
+
+        MDTopAppBar:
+            type: "small"
+
+            MDTopAppBarLeadingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "arrow-left"
+                    on_release: setattr(app.root, 'current', 'my_animals')
+
+            MDTopAppBarTitle:
+                text: "Animal Details"
+                pos_hint: {"center_x": .5}
+
+            MDTopAppBarTrailingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "pencil"
+                    on_release: app.edit_animal(root.animal_id)
+
+        ScrollView:
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: dp(16)
+                spacing: dp(16)
+                size_hint_y: None
+                height: self.minimum_height
+
+                # Basic animal info card
+                MDCard:
+                    orientation: "horizontal"
+                    padding: dp(12)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: max(self.minimum_height, dp(160))
+
+                    FitImage:
+                        id: animal_image
+                        size_hint: None, None
+                        size: dp(120), dp(120)
+                        allow_stretch: True
+                        radius: dp(8)
+
+                    MDBoxLayout:
+                        orientation: "vertical"
+                        spacing: dp(4)
+
+                        MDLabel:
+                            id: animal_name
+                            text: "Animal Name"
+                            font_style: "Display"
+                            role: "medium"
+                            adaptive_height: True
+
+                        MDLabel:
+                            id: animal_species
+                            text: "Species: Unknown"
+                            adaptive_height: True
+
+                        MDLabel:
+                            id: animal_breed
+                            text: "Breed: Unknown"
+                            adaptive_height: True
+
+                        MDLabel:
+                            id: animal_birthday
+                            text: "Birthday: Unknown"
+                            adaptive_height: True
+
+                        MDLabel:
+                            id: animal_sex
+                            text: "Sex: Unknown"
+                            adaptive_height: True
+
+                        MDLabel:
+                            id: animal_castrated
+                            text: "Castrated: No"
+                            adaptive_height: True
+
+                        MDLabel:
+                            id: animal_weight
+                            text: "Current Weight: Unknown"
+                            adaptive_height: True
+
+                # Weight history card
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(12)
+                    spacing: dp(8)
+                    size_hint_y: None
+                    height: self.minimum_height
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        adaptive_height: True
+                        spacing: dp(8)
+
+                        MDLabel:
+                            text: "Weight History"
+                            font_style: "Title"
+                            role: "medium"
+                            size_hint_x: 0.7
+
+                        MDButton:
+                            text: "Add Weight"
+                            style: "elevated"
+                            size_hint_x: 0.3
+                            on_release: root.show_add_weight_dialog()
+
+                    MDBoxLayout:
+                        id: weight_history_container
+                        orientation: "vertical"
+                        adaptive_height: True
+                        size_hint_y: None
+                        # This will be filled programmatically
+
+                # Assessments card
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(12)
+                    spacing: dp(8)
+                    size_hint_y: None
+                    height: self.minimum_height
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        adaptive_height: True
+                        spacing: dp(8)
+
+                        MDLabel:
+                            text: "Assessments"
+                            font_style: "Title"
+                            role: "medium"
+                            size_hint_x: 0.7
+
+                        MDButton:
+                            text: "New Assessment"
+                            style: "elevated"
+                            size_hint_x: 0.3
+                            on_release: app.new_assessment(root.animal_id)
+
+                    MDBoxLayout:
+                        id: assessments_container
+                        orientation: "vertical"
+                        adaptive_height: True
+                        size_hint_y: None
+                        # This will be filled programmatically

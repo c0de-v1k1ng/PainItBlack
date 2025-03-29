@@ -10,7 +10,7 @@
             MDTopAppBarLeadingButtonContainer:
                 MDActionTopAppBarButton:
                     icon: "arrow-left"
-                    on_release: setattr(app.root, 'current', 'home')
+                    on_release: app.switch_screen('home')
 
             MDTopAppBarTitle:
                 text: "Species Details"

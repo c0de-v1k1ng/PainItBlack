@@ -7,11 +7,6 @@
         MDTopAppBar:
             type: "small"
 
-            MDTopAppBarLeadingButtonContainer:
-                MDActionTopAppBarButton:
-                    icon: "arrow-left"
-                    on_release: setattr(app.root, 'current', 'home')
-
             MDTopAppBarTitle:
                 text: "My Animals"
                 pos_hint: {"center_x": .5}
@@ -24,5 +19,4 @@
             icon: "plus"
             style: "standard"
             pos_hint: {"center_x": 0.9, "center_y": 0.1}
-            on_release: setattr(app.root, 'current', 'add_animal')
-
+            on_release: app.screen_manager.current = 'add_animal'

@@ -1,0 +1,75 @@
+<RootLayout>:
+    MDBoxLayout:
+        orientation: "horizontal"
+
+        # Navigation Rail on the left
+        MDNavigationRail:
+            id: nav_rail
+            anchor: "center"
+            type: "selected"
+            md_bg_color: self.theme_cls.secondaryContainerColor
+            size_hint_x: None
+            width: "72dp"
+
+            # Optional Menu Button at top
+            MDNavigationRailMenuButton:
+                icon: "menu"
+                on_release: app.toggle_nav_drawer()
+
+            # FAB Button
+            MDNavigationRailFabButton:
+                icon: "paw"
+                on_release: app.switch_screen('home')
+
+            # Home
+            MDNavigationRailItem:
+                id: nav_home
+                active: True
+                on_release: app.switch_screen('home')
+
+                MDNavigationRailItemIcon:
+                    icon: "home"
+
+                MDNavigationRailItemLabel:
+                    text: "Home"
+
+            # My Animals
+            MDNavigationRailItem:
+                id: nav_animals
+                on_release: app.switch_screen('my_animals')
+
+                MDNavigationRailItemIcon:
+                    icon: "paw"
+
+                MDNavigationRailItemLabel:
+                    text: "Animals"
+
+            # Assessments
+            MDNavigationRailItem:
+                id: nav_assessments
+                on_release: app.switch_screen('assessments')
+
+                MDNavigationRailItemIcon:
+                    icon: "clipboard-list"
+
+                MDNavigationRailItemLabel:
+                    text: "Assessments"
+
+            # Settings (optional)
+            MDNavigationRailItem:
+                id: nav_settings
+                on_release: app.toggle_theme()
+
+                MDNavigationRailItemIcon:
+                    icon: "theme-light-dark"
+
+                MDNavigationRailItemLabel:
+                    text: "Theme"
+
+        # Content area on the right
+        MDBoxLayout:
+            orientation: "vertical"
+
+            # Screen manager to handle different screens
+            ScreenManager:
+                id: screen_manager

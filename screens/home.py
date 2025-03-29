@@ -5,7 +5,6 @@ from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.fitimage import FitImage
 from kivymd.uix.label import MDLabel
-from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screen import MDScreen
 
 
@@ -21,28 +20,6 @@ class HomeScreen(MDScreen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.menu = None
-
-    def show_menu(self):
-        """Opens flyout menu on clicking menu button"""
-        if not self.menu:
-            menu_items = [
-                {"leading_icon": "home", "text": "Home", "on_release": lambda x="home": self.navigate_to(x)},
-                {"leading_icon": "paw", "text": "My Animals", "on_release": lambda x="my_animals": self.navigate_to(x)},
-                {"leading_icon": "file-document", "text": "Assessments", "on_release": lambda x="assessments": self.navigate_to(x)}
-            ]
-
-            self.menu = MDDropdownMenu(
-                caller=self.ids.menu_button,
-                items=menu_items,
-                width_mult=3
-            )
-        self.menu.open()
-
-    def navigate_to(self, screen_name):
-        """Switch to selected screen and close menu"""
-        self.menu.dismiss()
-        self.manager.current = screen_name
 
     def on_enter(self):
         """Load species dynamically into the grid."""
@@ -76,4 +53,7 @@ class HomeScreen(MDScreen):
         """Navigate to species details screen."""
         species_screen = self.manager.get_screen("species_detail")
         species_screen.set_species_info(species_name)
-        self.manager.current = "species_detail"
+
+        # Get the app instance and use the switch_screen method
+        app = self.manager.get_parent_window().children[0]
+        app.screen_manager.current = "species_detail"

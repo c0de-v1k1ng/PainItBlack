@@ -10,7 +10,7 @@
             MDTopAppBarLeadingButtonContainer:
                 MDActionTopAppBarButton:
                     icon: "arrow-left"
-                    on_release: setattr(app.root, 'current', 'my_animals')
+                    on_release: app.switch_screen('my_animals')
 
             MDTopAppBarTitle:
                 text: "Animal Details"
@@ -105,10 +105,11 @@
                             size_hint_x: 0.7
 
                         MDButton:
-                            text: "Add Weight"
                             style: "elevated"
-                            size_hint_x: 0.3
                             on_release: root.show_add_weight_dialog()
+
+                            MDButtonText:
+                                text: "Add Weight"
 
                     MDBoxLayout:
                         id: weight_history_container
@@ -137,10 +138,11 @@
                             size_hint_x: 0.7
 
                         MDButton:
-                            text: "New Assessment"
                             style: "elevated"
-                            size_hint_x: 0.3
                             on_release: app.new_assessment(root.animal_id)
+
+                            MDButtonText:
+                                text: "New Assessment"
 
                     MDBoxLayout:
                         id: assessments_container

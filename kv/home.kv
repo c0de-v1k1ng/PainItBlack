@@ -6,26 +6,9 @@
 
         MDTopAppBar:
             type: "small"
-
-            #Menubar
-            MDTopAppBarLeadingButtonContainer:
-                MDActionTopAppBarButton:
-                    id: menu_button
-                    icon: "menu"
-                    on_release: root.show_menu()
-                MDIconButton:
-                    icon: "theme-light-dark"
-                    on_release: app.toggle_theme()
-            #Title
-            MDTopAppBarTitle:
-                text: "Animal Surveying App"
-                pos_hint: {"center_x":.5}
-
-            #ButtonsRight
-            MDTopAppBarTrailingButtonContainer:
-                MDActionTopAppBarButton:
-                    icon: "clipboard-list"
-                    on_release: setattr(app.root, 'current', 'assessments')
+            title: "Animal Surveying App"
+            # No need for left menu button anymore
+            elevation: 0
 
         ScrollView:
             MDBoxLayout:

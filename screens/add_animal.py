@@ -180,14 +180,15 @@ class AddAnimalScreen(MDScreen):
             image_save_path = os.path.join(image_dir, os.path.basename(self.selected_image_path))
             shutil.copy(self.selected_image_path, image_save_path)
 
-        database.add_animal(name, species, breed, birthday, sex, castrated, weight_in_kg, image_save_path)
+        animal_id = database.add_animal(name, species, breed, birthday, sex, castrated, weight_in_kg, image_save_path)
 
         self.reset_form()
         self.show_confirmation("Animal saved successfully!")
 
         # Navigate back to My Animals
-        self.manager.current = 'my_animals'
-        self.manager.get_screen('my_animals').load_animals()
+        app = self.manager.get_parent_window().children[0]
+        app.switch_screen('my_animals')
+        app.screen_manager.get_screen('my_animals').load_animals()
 
     def reset_form(self):
         for field in [
@@ -208,7 +209,11 @@ class AddAnimalScreen(MDScreen):
             MDDialogHeadlineText(text="Success"),
             MDDialogContentContainer(MDLabel(text=message)),
             MDDialogButtonContainer(
-                MDButton(MDButtonText(text="OK"), on_release=lambda x: self.dialog.dismiss())
+                MDButton(
+                    MDButtonText(text="OK"),
+                    style="text",
+                    on_release=lambda x: self.dialog.dismiss()
+                )
             )
         )
         self.dialog.open()
@@ -218,7 +223,11 @@ class AddAnimalScreen(MDScreen):
             MDDialogHeadlineText(text="Missing Info"),
             MDDialogContentContainer(MDLabel(text=message)),
             MDDialogButtonContainer(
-                MDButton(MDButtonText(text="OK"), on_release=lambda x: self.dialog.dismiss())
+                MDButton(
+                    MDButtonText(text="OK"),
+                    style="text",
+                    on_release=lambda x: self.dialog.dismiss()
+                )
             )
         )
         self.dialog.open()

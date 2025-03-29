@@ -40,7 +40,20 @@ class HomeScreen(MDScreen):
         )
 
         box = MDBoxLayout(orientation="vertical")
-        img = FitImage(source=image, size_hint_y=0.7)
+
+        try:
+            img = FitImage(
+                source=image,
+                size_hint_y=0.7,
+                # Update deprecated properties
+                fit_mode="contain"  # Instead of allow_stretch and keep_ratio
+            )
+        except Exception:
+            # Use a generic icon if the image file doesn't exist
+            img = MDBoxLayout(
+                size_hint_y=0.7,
+                md_bg_color=(0.8, 0.8, 0.8, 1)
+            )
         label = MDLabel(text=name, halign="center", size_hint_y=0.3)
 
         box.add_widget(img)

@@ -67,7 +67,7 @@ class AssessmentsScreen(MDScreen):
                                                                                                                animal_id)
             )
 
-            item.add_widget(MDListItemLeadingText(text=assessment[1]))  # Date
+            item.add_widget(MDListItemHeadlineText(text=assessment[1]))  # Date
             item.add_widget(
                 MDListItemHeadlineText(text=f"{assessment[4]} ({assessment[5]})"))  # Animal name and species
             item.add_widget(MDListItemSupportingText(text=f"{assessment[2]}: {assessment[3]}"))  # Scale and result
@@ -118,24 +118,27 @@ class AssessmentsScreen(MDScreen):
 
         # Create animal menu items
         animal_items = [
-            {"text": f"{animal[1]} ({animal[2]})",
-             "on_release": lambda x, a_id=animal[0], a_species=animal[2]: self.select_animal_for_assessment(a_id,
-                                                                                                            a_species,
-                                                                                                            animal_field)}
+            {
+                "text": f"{animal[1]} ({animal[2]})",
+                "on_release": lambda x, a_id=animal[0], a_species=animal[2]: self.select_animal_for_assessment(a_id,
+                                                                                                               a_species,
+                                                                                                               animal_field)
+            }
             for animal in animals
         ]
 
         # Show animal selector when focused
-        def show_animal_menu(field):
-            if field.focus:
+        def show_animal_menu(field, focus):
+            if focus:
                 self.animal_menu = MDDropdownMenu(
                     caller=field,
                     items=animal_items,
-                    width_mult=4
+                    # Use width_multiplier instead of width_mult
+                    width_multiplier=4
                 )
                 self.animal_menu.open()
 
-        animal_field.bind(focus=lambda instance, value: show_animal_menu(instance) if value else None)
+        animal_field.bind(focus=show_animal_menu)
         content.add_widget(animal_field)
 
         # Create the dialog
@@ -150,7 +153,7 @@ class AssessmentsScreen(MDScreen):
                 ),
                 MDButton(
                     MDButtonText(text="Continue"),
-                    style="elevated",
+                    style="text",
                     on_release=lambda x: self.continue_assessment()
                 ),
                 spacing="8dp"

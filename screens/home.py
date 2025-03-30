@@ -68,5 +68,7 @@ class HomeScreen(MDScreen):
         species_screen.set_species_info(species_name)
 
         # Get the app instance and use the switch_screen method
-        app = self.manager.get_parent_window().children[0]
-        app.screen_manager.current = "species_detail"
+        # app = self.manager.get_parent_window().children[0]
+        from kivymd.app import MDApp
+        app = MDApp.get_running_app()
+        app.switch_screen("species_detail")

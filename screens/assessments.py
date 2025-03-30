@@ -28,8 +28,16 @@ class AssessmentsScreen(MDScreen):
         super().__init__(**kwargs)
         self.dialog = None
         self.menu = None
+        self.animal_menu = None
+        self.scale_menu = None
         self.selected_scale = None
         self.selected_animal_id = None
+        self.selected_animal_species = None
+        self.assessment_dialog = None
+        self.detail_dialog = None
+        self.confirm_dialog = None
+        self.success_dialog = None
+        self.error_dialog = None
 
     def on_enter(self):
         """Refresh assessments when entering the screen."""
@@ -74,7 +82,7 @@ class AssessmentsScreen(MDScreen):
 
             self.ids.assessments_list.add_widget(item)
 
-    def show_new_assessment_dialog(self):
+    def show_new_assessment_dialog(self, *args):
         """Show dialog to create a new assessment."""
         # First, get a list of animals
         conn = database.get_db_connection()
@@ -115,17 +123,18 @@ class AssessmentsScreen(MDScreen):
             mode="outlined",
             id="animal_selector"
         )
+        #content.add_widget(animal_field)
 
         # Create animal menu items
-        animal_items = [
-            {
+        animal_items = []
+        for animal in animals:
+            a_id = animal[0]
+            a_species = animal[2]
+            # FIX: Create a proper lambda function with an instance parameter
+            animal_items.append({
                 "text": f"{animal[1]} ({animal[2]})",
-                "on_release": lambda x, a_id=animal[0], a_species=animal[2]: self.select_animal_for_assessment(a_id,
-                                                                                                               a_species,
-                                                                                                               animal_field)
-            }
-            for animal in animals
-        ]
+                "on_release": lambda instance, aid=a_id, asp=a_species: self.select_animal_for_assessment(aid, asp, animal_field)
+            })
 
         # Show animal selector when focused
         def show_animal_menu(field, focus):
@@ -133,12 +142,12 @@ class AssessmentsScreen(MDScreen):
                 self.animal_menu = MDDropdownMenu(
                     caller=field,
                     items=animal_items,
-                    # Use width_multiplier instead of width_mult
-                    width_multiplier=4
+                    width_mult=4  # Updated property name
                 )
                 self.animal_menu.open()
 
         animal_field.bind(focus=show_animal_menu)
+
         content.add_widget(animal_field)
 
         # Create the dialog
@@ -196,18 +205,21 @@ class AssessmentsScreen(MDScreen):
         )
 
         # Create scale menu items
-        scale_items = [
-            {"text": scale, "on_release": lambda x, s=scale: self.select_scale(s, scale_field)}
-            for scale in scales
-        ]
+        scale_items = []
+        for scale in scales:
+            # FIX: Create a proper lambda function with an instance parameter
+            scale_items.append({
+                "text": scale,
+                "on_release": lambda instance, s=scale: self.select_scale(s, scale_field)
+            })
 
         # Show scale selector when focused
-        def show_scale_menu(field):
-            if field.focus:
+        def show_scale_menu(field, focus):
+            if focus:
                 self.scale_menu = MDDropdownMenu(
                     caller=field,
                     items=scale_items,
-                    width_mult=4
+                    width_mult=4  # Updated property name
                 )
                 self.scale_menu.open()
 
@@ -305,19 +317,18 @@ class AssessmentsScreen(MDScreen):
 
         # Add view animal button
         view_button = MDButton(
-            text="View Animal",
             style="outlined",
             on_release=lambda x: self.view_animal(animal_id)
         )
+        view_button.add_widget(MDButtonText(text="View Animal"))
         actions.add_widget(view_button)
 
         # Add delete button
         delete_button = MDButton(
-            text="Delete Assessment",
             style="outlined",
-            text_color="red",
             on_release=lambda x: self.confirm_delete_assessment(assessment_id)
         )
+        delete_button.add_widget(MDButtonText(text="Delete Assessment", text_color="red"))
         actions.add_widget(delete_button)
 
         content.add_widget(actions)

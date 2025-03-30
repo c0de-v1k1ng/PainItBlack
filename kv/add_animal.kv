@@ -97,13 +97,8 @@
                             MDTextFieldHintText:
                                 text: "Weight"
 
-                        MDTextField:
-                            id: weight_unit
-                            hint_text: "Unit"
-                            mode: "outlined"
-                            on_focus: root.show_weight_unit_menu() if self.focus else None
-                            MDTextFieldHintText:
-                                text: "Unit"
+                        MDLabel:
+                            text: "kg"
 
                     MDBoxLayout:
                         spacing: "12dp"

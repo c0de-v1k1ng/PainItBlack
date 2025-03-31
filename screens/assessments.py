@@ -105,9 +105,13 @@ class AssessmentsScreen(MDScreen):
         """Handle assessment item click event"""
         self.show_assessment_details(assessment_id, animal_id)
 
-    def show_new_assessment_dialog(self, *args):
-        """Show dialog to create a new assessment."""
-        # First, get a list of animals
+    def show_new_assessment_dialog(self, *args, animal_id=None):
+        """Show dialog to create a new assessment, optionally preselecting an animal."""
+        # Fix Kivy misinterpreting the first arg as animal_id
+        if len(args) == 1 and isinstance(args[0], int) and animal_id is None:
+            animal_id = args[0]
+
+        # Get a list of all animals
         conn = database.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id, name, species FROM animals ORDER BY name")
@@ -131,6 +135,52 @@ class AssessmentsScreen(MDScreen):
             )
             self.dialog.open()
             return
+
+        # Create dialog content layout
+        content = MDBoxLayout(
+            orientation="vertical",
+            spacing="12dp",
+            padding=["20dp", "20dp", "20dp", "20dp"],
+            adaptive_height=True
+        )
+
+        # Create the animal selection field
+        self.animal_field = MDTextField(
+            hint_text="Select Animal",
+            mode="outlined",
+            id="animal_selector"
+        )
+        self.animal_field.bind(focus=self.show_animal_menu)
+        content.add_widget(self.animal_field)
+
+        # Create the dialog
+        self.dialog = MDDialog(
+            MDDialogHeadlineText(text="New Assessment"),
+            MDDialogContentContainer(content),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Cancel"),
+                    style="text",
+                    on_release=lambda x: self.dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Continue"),
+                    style="text",
+                    on_release=lambda x: self.continue_assessment()
+                ),
+                spacing="8dp"
+            ),
+            auto_dismiss=False
+        )
+
+        self.dialog.open()
+
+        # Preselect the given animal if provided
+        if animal_id is not None:
+            for a_id, name, species in animals:
+                if a_id == animal_id:
+                    self.select_animal_for_assessment(a_id, name, species)
+                    break
 
         # Create dialog for animal selection
         content = MDBoxLayout(
@@ -682,3 +732,41 @@ class AssessmentsScreen(MDScreen):
             self.show_success_dialog("Assessment deleted successfully!")
         else:
             self.show_error_dialog("Failed to delete assessment.")
+
+    def show_success_dialog(self, message):
+        """Display a success dialog with the provided message."""
+        if self.dialog:
+            self.dialog.dismiss()
+
+        self.dialog = MDDialog(
+            MDDialogHeadlineText(text="Success"),
+            MDDialogContentContainer(
+                MDLabel(text=message, theme_text_color="Custom", text_color=(0, 0.5, 0, 1))
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="OK"),
+                    on_release=lambda x: self.dialog.dismiss()
+                )
+            ),
+        )
+        self.dialog.open()
+
+    def show_error_dialog(self, message):
+        """Display an error dialog with the provided message."""
+        if self.dialog:
+            self.dialog.dismiss()
+
+        self.dialog = MDDialog(
+            MDDialogHeadlineText(text="Error"),
+            MDDialogContentContainer(
+                MDLabel(text=message, theme_text_color="Custom", text_color=(1, 0, 0, 1))
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Close"),
+                    on_release=lambda x: self.dialog.dismiss()
+                )
+            ),
+        )
+        self.dialog.open()

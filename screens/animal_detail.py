@@ -1,10 +1,11 @@
 import json
 
 from kivy.uix.screenmanager import Screen
+from kivymd.app import MDApp
 from kivymd.uix.card import MDCard
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.button import MDButton, MDButtonText, MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
 from kivymd.uix.fitimage import FitImage
@@ -18,6 +19,8 @@ import database
 import os
 from datetime import datetime
 
+from screens.assessments import AssessmentsScreen
+
 
 class AnimalDetailScreen(MDScreen):
     """Screen for displaying detailed information about a specific animal."""
@@ -25,6 +28,7 @@ class AnimalDetailScreen(MDScreen):
     animal_id = NumericProperty(None)
     target_weight = NumericProperty(None)
     target_date = StringProperty("")
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -232,6 +236,7 @@ class AnimalDetailScreen(MDScreen):
             return
 
         self.ids.target_container.clear_widgets()
+        self.ids.target_container.height = self.ids.target_container.minimum_height
 
         # Create target weight header
         target_header = MDBoxLayout(
@@ -647,6 +652,7 @@ class AnimalDetailScreen(MDScreen):
         self.show_success_dialog("Weight target cleared successfully!")
 
     def load_assessments(self):
+        app = MDApp.get_running_app()
         """Load and display assessments."""
         if not hasattr(self, 'ids') or not self.ids or not hasattr(self.ids, 'assessments_container'):
             return
@@ -674,81 +680,94 @@ class AnimalDetailScreen(MDScreen):
             self.ids.assessments_container.add_widget(empty_label)
             return
 
-        # Add assessment entries
-        for assessment_id, date, scale, result in assessments:
-            # Try to parse JSON result
+        for index, (assessment_id, date, scale, result) in enumerate(assessments):
             try:
                 result_data = json.loads(result)
                 if isinstance(result_data, dict) and "score" in result_data and "interpretation" in result_data:
-                    result_display = f"Score: {result_data['score']} - {result_data['interpretation']}"
+                    result_display = f"{result_data['score']} - {result_data['interpretation']}"
                 else:
                     result_display = result
             except (json.JSONDecodeError, TypeError):
-                # Not JSON or parsing failed, use raw text
                 result_display = result
 
-            # Create a card for each assessment to better contain the content
-            card = MDCard(
-                orientation="vertical",
-                size_hint_y=None,
-                height=dp(120),  # Fixed initial height
-                padding=dp(8),
-                elevation=1
-            )
+            bg_color = get_color_from_hex("#f0f0f0") if index % 2 == 0 else get_color_from_hex("#ffffff")
 
-            # Header with date and scale
-            header = MDBoxLayout(
+            # Entire row
+            row = MDBoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
-                height=dp(40),
-                padding=[0, dp(4), 0, dp(4)]
+                height=dp(48),
+                padding=[dp(8), 0, dp(8), 0],
+                spacing=dp(8),
+                md_bg_color=bg_color
             )
 
-            date_label = MDLabel(
-                text=f"Date: {date}",
-                size_hint_x=0.5,
-                font_style="Body",
-                role="medium"
+            # Make entire left section clickable
+            clickable_box = MDBoxLayout(
+                orientation="horizontal",
+                size_hint_x=0.9,
+                spacing=dp(8)
+            )
+            clickable_box.add_widget(MDLabel(text=date, size_hint_x=0.25))
+            clickable_box.add_widget(MDLabel(text=scale, size_hint_x=0.35))
+            clickable_box.add_widget(MDLabel(text=result_display, size_hint_x=0.4))
+
+
+
+            clickable_box.bind(
+                on_touch_down=lambda inst, touch, aid=assessment_id, anid=self.animal_id: (
+                    app.screen_manager.get_screen("assessments").show_assessment_details(aid, anid)
+                    if inst.collide_point(*touch.pos) and not touch.is_double_tap else None
+                )
             )
 
-            scale_label = MDLabel(
-                text=f"Scale: {scale}",
-                size_hint_x=0.5,
-                font_style="Body",
-                role="medium"
+            delete_btn = MDIconButton(
+                icon="trash-can-outline",
+                style="standard",
+                pos_hint={"center_y": 0.5},
+                on_release=lambda x, aid=assessment_id: app.screen_manager.get_screen("assessments").delete_assessment(
+                    aid)
             )
 
-            header.add_widget(date_label)
-            header.add_widget(scale_label)
+            row.add_widget(clickable_box)
+            row.add_widget(delete_btn)
 
-            # Result section
-            result_box = MDBoxLayout(
-                orientation="vertical",
-                size_hint_y=None,
-                height=dp(60),
-                padding=[dp(4), dp(4), dp(4), dp(4)]
-            )
+            self.ids.assessments_container.add_widget(row)
 
-            result_label = MDLabel(
-                text=f"Result: {result_display}",
-                font_style="Body",
-                role="small",
-                size_hint_y=None,
-                height=dp(60)
-            )
+    def show_success_dialog(self, message):
+        """Display a success dialog with the provided message."""
+        if self.dialog:
+            self.dialog.dismiss()
 
-            result_box.add_widget(result_label)
+        self.dialog = MDDialog(
+            MDDialogHeadlineText(text="Success"),
+            MDDialogContentContainer(
+                MDLabel(text=message, theme_text_color="Custom", text_color=(0, 0.5, 0, 1))
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="OK"),
+                    on_release=lambda x: self.dialog.dismiss()
+                )
+            ),
+        )
+        self.dialog.open()
 
-            # Add the header and result to the card
-            card.add_widget(header)
-            card.add_widget(result_box)
+    def show_error_dialog(self, message):
+        """Display an error dialog with the provided message."""
+        if self.dialog:
+            self.dialog.dismiss()
 
-            # Add the card to the container
-            self.ids.assessments_container.add_widget(card)
-
-            # Add spacing between cards
-            spacer = MDBoxLayout(
-                size_hint_y=None,
-                height=dp(8)
-            )
-            self.ids.assessments_container.add_widget(spacer)
+        self.dialog = MDDialog(
+            MDDialogHeadlineText(text="Error"),
+            MDDialogContentContainer(
+                MDLabel(text=message, theme_text_color="Custom", text_color=(1, 0, 0, 1))
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Close"),
+                    on_release=lambda x: self.dialog.dismiss()
+                )
+            ),
+        )
+        self.dialog.open()

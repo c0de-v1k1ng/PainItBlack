@@ -17,7 +17,6 @@ import shutil
 
 class AddAnimalScreen(MDScreen):
     species_list = ["Rat", "Mouse", "Rabbit", "Goat", "Sheep", "Pig"]  # Example species list
-    weight_units = ["kg", "g"]
     sex_options = ["Male", "Female"]
     birthday_text = "Select Date"
     selected_image_path = ""
@@ -30,11 +29,9 @@ class AddAnimalScreen(MDScreen):
         self.dialog = None
         self.selected_species = None
         self.selected_sex = None
-        self.selected_unit = "kg"
         self.selected_image_path = ""
         self.species_menu = None
         self.sex_menu = None
-        self.unit_menu = None
         self.file_chooser_view = None
 
     def show_species_menu(self):
@@ -62,18 +59,6 @@ class AddAnimalScreen(MDScreen):
     def set_sex(self, gender):
         self.selected_sex = gender
         self.ids.sex_dropdown.text = gender
-
-    def show_weight_unit_menu(self):
-        """Dropdown for selecting weight unit."""
-        menu_items = [
-            {"text": unit, "on_release": lambda x=unit: self.set_weight_unit(x)}
-            for unit in self.weight_units
-        ]
-        MDDropdownMenu(caller=self.ids.weight_unit, items=menu_items, width_mult=3).open()
-
-    def set_weight_unit(self, unit):
-        self.selected_unit = unit
-        self.ids.weight_unit.text = unit
 
     def show_date_picker(self, field_widget):
         if not field_widget.focus:
@@ -159,14 +144,13 @@ class AddAnimalScreen(MDScreen):
         sex = self.selected_sex
         castrated = "Yes" if self.ids.animal_castrated.active else "No"
         weight = self.ids.animal_weight.text.strip()
-        weight_unit = self.selected_unit
 
         if not name or not species or not weight:
             self.show_error("Name/ID, Species, and Weight are required!")
             return
 
         try:
-            weight_in_kg = float(weight) if weight_unit == "kg" else float(weight) / 1000  # Convert g to kg
+            weight_in_kg = float(weight)  # Weight is always in kg now
         except ValueError:
             self.show_error("Weight must be a valid number!")
             return
@@ -201,7 +185,7 @@ class AddAnimalScreen(MDScreen):
     def reset_form(self):
         for field in [
             "animal_name", "species_dropdown", "animal_breed", "animal_birth_date",
-            "sex_dropdown", "animal_weight", "weight_unit"
+            "sex_dropdown", "animal_weight"
         ]:
             self.ids[field].text = ""
         self.ids.animal_castrated.active = False
@@ -209,7 +193,6 @@ class AddAnimalScreen(MDScreen):
         self.selected_image_path = ""
         self.selected_species = None
         self.selected_sex = None
-        self.selected_unit = "kg"
         self.birthday_text = "Select Date"
 
     def show_confirmation(self, message):

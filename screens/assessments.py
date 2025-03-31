@@ -8,6 +8,8 @@ from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentCon
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.menu import MDDropdownMenu
 from datetime import datetime
+from functools import partial
+from kivy.metrics import dp
 
 import database
 
@@ -38,6 +40,8 @@ class AssessmentsScreen(MDScreen):
         self.confirm_dialog = None
         self.success_dialog = None
         self.error_dialog = None
+        self.animal_field = None
+        self.scale_field = None
 
     def on_enter(self):
         """Refresh assessments when entering the screen."""
@@ -70,17 +74,23 @@ class AssessmentsScreen(MDScreen):
 
         # Add assessments to the list
         for assessment in assessments:
-            item = MDListItem(
-                on_release=lambda x, a_id=assessment[0], animal_id=assessment[6]: self.show_assessment_details(a_id,
-                                                                                                               animal_id)
-            )
+            a_id = assessment[0]
+            animal_id = assessment[6]
 
+            item = MDListItem()
             item.add_widget(MDListItemHeadlineText(text=assessment[1]))  # Date
             item.add_widget(
                 MDListItemHeadlineText(text=f"{assessment[4]} ({assessment[5]})"))  # Animal name and species
             item.add_widget(MDListItemSupportingText(text=f"{assessment[2]}: {assessment[3]}"))  # Scale and result
 
+            # Use a separate binding method to avoid lambda issues
+            item.bind(on_release=partial(self.on_assessment_item_click, a_id, animal_id))
+
             self.ids.assessments_list.add_widget(item)
+
+    def on_assessment_item_click(self, assessment_id, animal_id, instance):
+        """Handle assessment item click event"""
+        self.show_assessment_details(assessment_id, animal_id)
 
     def show_new_assessment_dialog(self, *args):
         """Show dialog to create a new assessment."""
@@ -118,37 +128,13 @@ class AssessmentsScreen(MDScreen):
         )
 
         # Create animal selection dropdown
-        animal_field = MDTextField(
+        self.animal_field = MDTextField(
             hint_text="Select Animal",
             mode="outlined",
             id="animal_selector"
         )
-        #content.add_widget(animal_field)
-
-        # Create animal menu items
-        animal_items = []
-        for animal in animals:
-            a_id = animal[0]
-            a_species = animal[2]
-            # FIX: Create a proper lambda function with an instance parameter
-            animal_items.append({
-                "text": f"{animal[1]} ({animal[2]})",
-                "on_release": lambda instance, aid=a_id, asp=a_species: self.select_animal_for_assessment(aid, asp, animal_field)
-            })
-
-        # Show animal selector when focused
-        def show_animal_menu(field, focus):
-            if focus:
-                self.animal_menu = MDDropdownMenu(
-                    caller=field,
-                    items=animal_items,
-                    width_mult=4  # Updated property name
-                )
-                self.animal_menu.open()
-
-        animal_field.bind(focus=show_animal_menu)
-
-        content.add_widget(animal_field)
+        self.animal_field.bind(focus=self.show_animal_menu)
+        content.add_widget(self.animal_field)
 
         # Create the dialog
         self.dialog = MDDialog(
@@ -171,11 +157,41 @@ class AssessmentsScreen(MDScreen):
         )
         self.dialog.open()
 
-    def select_animal_for_assessment(self, animal_id, species, field_widget):
+    def show_animal_menu(self, field_widget, focus):
+        """Show dropdown menu for animal selection"""
+        if not focus:
+            return
+
+        # Get animals from database
+        conn = database.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, species FROM animals ORDER BY name")
+        animals = cursor.fetchall()
+        conn.close()
+
+        menu_items = []
+        for animal in animals:
+            animal_id = animal[0]
+            animal_name = animal[1]
+            animal_species = animal[2]
+            menu_items.append({
+                "text": f"{animal_name} ({animal_species})",
+                "on_release": partial(self.select_animal_for_assessment, animal_id, animal_species)
+            })
+
+        self.animal_menu = MDDropdownMenu(
+            caller=field_widget,
+            items=menu_items,
+            width_mult=4,
+            position="bottom"
+        )
+        self.animal_menu.open()
+
+    def select_animal_for_assessment(self, animal_id, species, *args):
         """Select an animal for the assessment."""
         self.selected_animal_id = animal_id
         self.selected_animal_species = species
-        field_widget.text = f"ID: {animal_id} (Species: {species})"
+        self.animal_field.text = f"{species} (ID: {animal_id})"
         if self.animal_menu:
             self.animal_menu.dismiss()
 
@@ -198,33 +214,13 @@ class AssessmentsScreen(MDScreen):
         )
 
         # Create scale selection dropdown
-        scale_field = MDTextField(
+        self.scale_field = MDTextField(
             hint_text="Select Assessment Scale",
             mode="outlined",
             id="scale_selector"
         )
-
-        # Create scale menu items
-        scale_items = []
-        for scale in scales:
-            # FIX: Create a proper lambda function with an instance parameter
-            scale_items.append({
-                "text": scale,
-                "on_release": lambda instance, s=scale: self.select_scale(s, scale_field)
-            })
-
-        # Show scale selector when focused
-        def show_scale_menu(field, focus):
-            if focus:
-                self.scale_menu = MDDropdownMenu(
-                    caller=field,
-                    items=scale_items,
-                    width_mult=4  # Updated property name
-                )
-                self.scale_menu.open()
-
-        scale_field.bind(focus=show_scale_menu)
-        content.add_widget(scale_field)
+        self.scale_field.bind(focus=partial(self.show_scale_menu, scales))
+        content.add_widget(self.scale_field)
 
         # Add result field
         result_field = MDTextField(
@@ -247,7 +243,7 @@ class AssessmentsScreen(MDScreen):
                 MDButton(
                     MDButtonText(text="Save"),
                     style="elevated",
-                    on_release=lambda x: self.save_assessment(scale_field.text, result_field.text)
+                    on_release=lambda x: self.save_assessment(self.scale_field.text, result_field.text)
                 ),
                 spacing="8dp"
             ),
@@ -255,10 +251,30 @@ class AssessmentsScreen(MDScreen):
         )
         self.assessment_dialog.open()
 
-    def select_scale(self, scale, field_widget):
+    def show_scale_menu(self, scales, field_widget, focus):
+        """Show dropdown menu for scale selection"""
+        if not focus:
+            return
+
+        menu_items = []
+        for scale in scales:
+            menu_items.append({
+                "text": scale,
+                "on_release": partial(self.select_scale, scale)
+            })
+
+        self.scale_menu = MDDropdownMenu(
+            caller=field_widget,
+            items=menu_items,
+            width_mult=4,
+            position="bottom"
+        )
+        self.scale_menu.open()
+
+    def select_scale(self, scale, *args):
         """Select an assessment scale."""
         self.selected_scale = scale
-        field_widget.text = scale
+        self.scale_field.text = scale
         if self.scale_menu:
             self.scale_menu.dismiss()
 
@@ -339,7 +355,7 @@ class AssessmentsScreen(MDScreen):
             MDDialogContentContainer(content),
             MDDialogButtonContainer(
                 MDButton(
-                    MDButtonText(text="Close"),
+                    MDButtonText(text="OK"),
                     style="text",
                     on_release=lambda x: self.detail_dialog.dismiss()
                 )

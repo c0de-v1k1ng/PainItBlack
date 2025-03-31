@@ -3,15 +3,17 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivymd.app import MDApp
 from kivymd.theming import ThemeManager
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.textfield import MDTextField
 
 import database
 from screens.home import HomeScreen
 from screens.species_detail import SpeciesDetailScreen
 from screens.my_animals import MyAnimalsScreen
 from screens.add_animal import AddAnimalScreen
-from screens.edit_animal import EditAnimalScreen  # Import the new screen
+from screens.edit_animal import EditAnimalScreen
 from screens.assessments import AssessmentsScreen
 from screens.animal_detail import AnimalDetailScreen
+from screens.detailed_assessment import DetailedAssessmentScreen
 
 
 class RootLayout(MDBoxLayout):
@@ -37,7 +39,8 @@ class MainApp(MDApp):
 
         # Load all kv files dynamically
         for kv_file in ['home.kv', 'species_detail.kv', 'my_animals.kv', 'assessments.kv',
-                        'add_animal.kv', 'edit_animal.kv', 'animal_detail.kv']:  # Added edit_animal.kv
+                        'add_animal.kv', 'edit_animal.kv', 'animal_detail.kv',
+                        'detailed_assessment.kv']:  # Added detailed_assessment.kv
             Builder.load_file(f'kv/{kv_file}')
             print(f"✅ Loaded kv: {kv_file}")
 
@@ -53,8 +56,10 @@ class MainApp(MDApp):
         self.screen_manager.add_widget(MyAnimalsScreen(name='my_animals'))
         self.screen_manager.add_widget(AssessmentsScreen(name='assessments'))
         self.screen_manager.add_widget(AddAnimalScreen(name='add_animal'))
-        self.screen_manager.add_widget(EditAnimalScreen(name='edit_animal'))  # Added edit animal screen
+        self.screen_manager.add_widget(EditAnimalScreen(name='edit_animal'))
         self.screen_manager.add_widget(AnimalDetailScreen(name='animal_detail'))
+        self.screen_manager.add_widget(
+            DetailedAssessmentScreen(name='detailed_assessment'))  # Added detailed assessment
 
         # Set up active navigation item tracking
         self.active_nav_item = self.root.ids.nav_home
@@ -81,7 +86,6 @@ class MainApp(MDApp):
         item.active = True
         self.active_nav_item = item
 
-
     def toggle_theme(self):
         """Toggle between Light and Dark mode dynamically."""
         if self.theme_cls.theme_style == "Light":
@@ -105,9 +109,25 @@ class MainApp(MDApp):
     def new_assessment(self, animal_id):
         """Navigate to assessment screen for the specified animal."""
         assessment_screen = self.screen_manager.get_screen('assessments')
-        assessment_screen.selected_animal_id = animal_id
-        self.screen_manager.current = 'assessments'
-        self.set_active_nav_item(self.root.ids.nav_assessments)
+
+        # Get animal details
+        conn = database.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name, species FROM animals WHERE id = ?", (animal_id,))
+        animal = cursor.fetchone()
+        conn.close()
+
+        if animal:
+            animal_name, animal_species = animal
+            assessment_screen.selected_animal_id = animal_id
+            assessment_screen.selected_animal_name = animal_name
+            assessment_screen.selected_animal_species = animal_species
+            self.screen_manager.current = 'assessments'
+            self.set_active_nav_item(self.root.ids.nav_assessments)
+
+            # Automatically show the scale selection dialog
+            assessment_screen.animal_field = MDTextField(text=f"{animal_name} ({animal_species})")
+            assessment_screen.continue_assessment()
 
 
 if __name__ == '__main__':

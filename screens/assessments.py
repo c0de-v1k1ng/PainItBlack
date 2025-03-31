@@ -10,21 +10,14 @@ from kivymd.uix.menu import MDDropdownMenu
 from datetime import datetime
 from functools import partial
 from kivy.metrics import dp
+import json
 
 import database
+from assessment_scales import ASSESSMENT_SCALES
 
 
 class AssessmentsScreen(MDScreen):
     """Screen for displaying and managing assessments."""
-
-    assessment_scales = {
-        "Rat": ["Body Condition Score", "Grimace Scale", "Activity Score"],
-        "Mouse": ["Mouse Grimace Scale", "BCS Mouse", "Activity Level"],
-        "Rabbit": ["Rabbit Grimace Scale", "Body Condition Score", "Wellness Score"],
-        "Goat": ["FAMACHA Score", "Body Condition Score", "Pain Scale"],
-        "Sheep": ["FAMACHA Score", "Body Condition Score", "Lameness Score"],
-        "Pig": ["Body Condition Score", "Lameness Score", "Welfare Assessment"]
-    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -35,6 +28,7 @@ class AssessmentsScreen(MDScreen):
         self.selected_scale = None
         self.selected_animal_id = None
         self.selected_animal_species = None
+        self.selected_animal_name = None
         self.assessment_dialog = None
         self.detail_dialog = None
         self.confirm_dialog = None
@@ -76,15 +70,31 @@ class AssessmentsScreen(MDScreen):
         for assessment in assessments:
             a_id = assessment[0]
             animal_id = assessment[6]
+            result_text = assessment[3]
 
-            item = MDListItem()
+            # Try to parse JSON result for richer display
+            try:
+                result_data = json.loads(result_text)
+                if isinstance(result_data, dict) and "score" in result_data and "interpretation" in result_data:
+                    result_display = f"{assessment[2]}: {result_data['score']} - {result_data['interpretation']}"
+                else:
+                    result_display = f"{assessment[2]}: {result_text}"
+            except (json.JSONDecodeError, TypeError):
+                # Not JSON or parsing failed, use raw text
+                result_display = f"{assessment[2]}: {result_text}"
+
+            item = MDListItem(
+                on_release=partial(self.on_assessment_item_click, a_id, animal_id)
+            )
+            # Add headline text (date)
             item.add_widget(MDListItemHeadlineText(text=assessment[1]))  # Date
+
+            # Add animal info
             item.add_widget(
                 MDListItemHeadlineText(text=f"{assessment[4]} ({assessment[5]})"))  # Animal name and species
-            item.add_widget(MDListItemSupportingText(text=f"{assessment[2]}: {assessment[3]}"))  # Scale and result
 
-            # Use a separate binding method to avoid lambda issues
-            item.bind(on_release=partial(self.on_assessment_item_click, a_id, animal_id))
+            # Add result info
+            item.add_widget(MDListItemSupportingText(text=result_display))
 
             self.ids.assessments_list.add_widget(item)
 
@@ -176,7 +186,7 @@ class AssessmentsScreen(MDScreen):
             animal_species = animal[2]
             menu_items.append({
                 "text": f"{animal_name} ({animal_species})",
-                "on_release": partial(self.select_animal_for_assessment, animal_id, animal_species)
+                "on_release": partial(self.select_animal_for_assessment, animal_id, animal_name, animal_species)
             })
 
         self.animal_menu = MDDropdownMenu(
@@ -187,11 +197,12 @@ class AssessmentsScreen(MDScreen):
         )
         self.animal_menu.open()
 
-    def select_animal_for_assessment(self, animal_id, species, *args):
+    def select_animal_for_assessment(self, animal_id, animal_name, species, *args):
         """Select an animal for the assessment."""
         self.selected_animal_id = animal_id
+        self.selected_animal_name = animal_name
         self.selected_animal_species = species
-        self.animal_field.text = f"{species} (ID: {animal_id})"
+        self.animal_field.text = f"{animal_name} ({species})"
         if self.animal_menu:
             self.animal_menu.dismiss()
 
@@ -203,9 +214,12 @@ class AssessmentsScreen(MDScreen):
         self.dialog.dismiss()
 
         # Get assessment scales for the selected species
-        scales = self.assessment_scales.get(self.selected_animal_species, ["General Assessment"])
+        if self.selected_animal_species in ASSESSMENT_SCALES:
+            scales = list(ASSESSMENT_SCALES[self.selected_animal_species].keys())
+        else:
+            scales = ["General Assessment"]
 
-        # Create dialog for assessment details
+        # Create dialog for scale selection
         content = MDBoxLayout(
             orientation="vertical",
             spacing="12dp",
@@ -222,17 +236,9 @@ class AssessmentsScreen(MDScreen):
         self.scale_field.bind(focus=partial(self.show_scale_menu, scales))
         content.add_widget(self.scale_field)
 
-        # Add result field
-        result_field = MDTextField(
-            hint_text="Assessment Result",
-            mode="outlined",
-            id="result_field"
-        )
-        content.add_widget(result_field)
-
         # Create the dialog
         self.assessment_dialog = MDDialog(
-            MDDialogHeadlineText(text="Enter Assessment"),
+            MDDialogHeadlineText(text="Select Assessment Scale"),
             MDDialogContentContainer(content),
             MDDialogButtonContainer(
                 MDButton(
@@ -241,9 +247,9 @@ class AssessmentsScreen(MDScreen):
                     on_release=lambda x: self.assessment_dialog.dismiss()
                 ),
                 MDButton(
-                    MDButtonText(text="Save"),
+                    MDButtonText(text="Start Assessment"),
                     style="elevated",
-                    on_release=lambda x: self.save_assessment(self.scale_field.text, result_field.text)
+                    on_release=lambda x: self.start_detailed_assessment()
                 ),
                 spacing="8dp"
             ),
@@ -278,6 +284,32 @@ class AssessmentsScreen(MDScreen):
         if self.scale_menu:
             self.scale_menu.dismiss()
 
+    def start_detailed_assessment(self):
+        """Start a detailed assessment using the selected scale."""
+        if not self.selected_scale or not self.selected_animal_id:
+            return
+
+        # Dismiss the dialog
+        self.assessment_dialog.dismiss()
+
+        # Get app instance to access the screen manager
+        from kivymd.app import MDApp
+        app = MDApp.get_running_app()
+
+        # Get the detailed assessment screen
+        detailed_screen = app.screen_manager.get_screen('detailed_assessment')
+
+        # Set up the assessment parameters
+        detailed_screen.set_assessment_params(
+            self.selected_animal_id,
+            self.selected_animal_name,
+            self.selected_animal_species,
+            self.selected_scale
+        )
+
+        # Switch to the detailed assessment screen
+        app.screen_manager.current = 'detailed_assessment'
+
     def save_assessment(self, scale, result):
         """Save the assessment to the database."""
         if not scale or not result:
@@ -311,6 +343,97 @@ class AssessmentsScreen(MDScreen):
         if not assessment:
             return
 
+        # Try to parse JSON result
+        result_text = assessment[2]
+        try:
+            result_data = json.loads(result_text)
+            if isinstance(result_data, dict):
+                # Format JSON content for display
+                content = self.format_assessment_result(result_data, assessment[0], assessment[1], assessment[3],
+                                                        assessment[4])
+            else:
+                # Fall back to simple display
+                content = self.create_simple_assessment_content(assessment)
+        except (json.JSONDecodeError, TypeError):
+            # Not JSON or parsing failed, use simple display
+            content = self.create_simple_assessment_content(assessment)
+
+        # Show dialog
+        self.detail_dialog = MDDialog(
+            MDDialogHeadlineText(text="Assessment Details"),
+            MDDialogContentContainer(content),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="View Animal"),
+                    style="outlined",
+                    on_release=lambda x: self.view_animal(animal_id)
+                ),
+                MDButton(
+                    MDButtonText(text="Delete", text_color="red"),
+                    style="text",
+                    on_release=lambda x: self.confirm_delete_assessment(assessment_id),
+
+                ),
+                MDButton(
+                    MDButtonText(text="Close"),
+                    style="text",
+                    on_release=lambda x: self.detail_dialog.dismiss()
+                ),
+                spacing="8dp"
+            )
+        )
+        self.detail_dialog.open()
+
+    def format_assessment_result(self, result_data, date, scale, animal_name, animal_species):
+        """Format JSON assessment result for display."""
+        content = MDBoxLayout(
+            orientation="vertical",
+            spacing="8dp",
+            padding=["16dp", "16dp", "16dp", "16dp"],
+            adaptive_height=True
+        )
+
+        # Add animal and scale info
+        content.add_widget(MDLabel(text=f"Animal: {animal_name} ({animal_species})"))
+        content.add_widget(MDLabel(text=f"Date: {date}"))
+        content.add_widget(MDLabel(text=f"Assessment Scale: {scale}"))
+
+        # Add score and interpretation if available
+        if "score" in result_data:
+            score_label = MDLabel(text=f"Score: {result_data['score']}")
+            content.add_widget(score_label)
+
+        if "interpretation" in result_data:
+            interp_label = MDLabel(text=f"Result: {result_data['interpretation']}")
+            content.add_widget(interp_label)
+
+        # Add details if available
+        if "details" in result_data and isinstance(result_data["details"], list):
+            content.add_widget(MDLabel(text="Assessment Details:", font_style="Title", role="small"))
+
+            for detail in result_data["details"]:
+                if isinstance(detail, dict):
+                    detail_box = MDBoxLayout(
+                        orientation="vertical",
+                        adaptive_height=True,
+                        padding=("8dp", "4dp")
+                    )
+
+                    if "question" in detail:
+                        detail_box.add_widget(MDLabel(text=detail["question"], font_style="Body", role="medium"))
+
+                    if "answer" in detail:
+                        answer_text = f"Answer: {detail['answer']}"
+                        if "score" in detail:
+                            answer_text += f" (Score: {detail['score']})"
+                        detail_box.add_widget(MDLabel(text=answer_text, font_style="Body", role="small"))
+
+                    content.add_widget(detail_box)
+
+        return content
+
+    def create_simple_assessment_content(self, assessment):
+        """Create simple content display for non-JSON assessment result."""
         content = MDBoxLayout(
             orientation="vertical",
             spacing="8dp",
@@ -324,120 +447,4 @@ class AssessmentsScreen(MDScreen):
         content.add_widget(MDLabel(text=f"Assessment Scale: {assessment[1]}"))
         content.add_widget(MDLabel(text=f"Result: {assessment[2]}"))
 
-        # Create action buttons
-        actions = MDBoxLayout(
-            orientation="horizontal",
-            spacing="8dp",
-            adaptive_height=True
-        )
-
-        # Add view animal button
-        view_button = MDButton(
-            style="outlined",
-            on_release=lambda x: self.view_animal(animal_id)
-        )
-        view_button.add_widget(MDButtonText(text="View Animal"))
-        actions.add_widget(view_button)
-
-        # Add delete button
-        delete_button = MDButton(
-            style="outlined",
-            on_release=lambda x: self.confirm_delete_assessment(assessment_id)
-        )
-        delete_button.add_widget(MDButtonText(text="Delete Assessment", text_color="red"))
-        actions.add_widget(delete_button)
-
-        content.add_widget(actions)
-
-        # Show dialog
-        self.detail_dialog = MDDialog(
-            MDDialogHeadlineText(text="Assessment Details"),
-            MDDialogContentContainer(content),
-            MDDialogButtonContainer(
-                MDButton(
-                    MDButtonText(text="OK"),
-                    style="text",
-                    on_release=lambda x: self.detail_dialog.dismiss()
-                )
-            )
-        )
-        self.detail_dialog.open()
-
-    def view_animal(self, animal_id):
-        """Navigate to animal details screen."""
-        self.detail_dialog.dismiss()
-        animal_detail_screen = self.manager.get_screen('animal_detail')
-        animal_detail_screen.set_animal_id(animal_id)
-        self.manager.current = 'animal_detail'
-
-    def confirm_delete_assessment(self, assessment_id):
-        """Confirm before deleting an assessment."""
-        self.detail_dialog.dismiss()
-
-        # Create confirmation dialog
-        self.confirm_dialog = MDDialog(
-            MDDialogHeadlineText(text="Confirm Deletion"),
-            MDDialogContentContainer(
-                MDLabel(text="Are you sure you want to delete this assessment?")
-            ),
-            MDDialogButtonContainer(
-                MDButton(
-                    MDButtonText(text="Cancel"),
-                    style="text",
-                    on_release=lambda x: self.confirm_dialog.dismiss()
-                ),
-                MDButton(
-                    MDButtonText(text="Delete"),
-                    style="elevated",
-                    on_release=lambda x: self.delete_assessment(assessment_id)
-                ),
-                spacing="8dp"
-            ),
-            auto_dismiss=False
-        )
-        self.confirm_dialog.open()
-
-    def delete_assessment(self, assessment_id):
-        """Delete the assessment from the database."""
-        success = database.delete_assessment(assessment_id)
-        self.confirm_dialog.dismiss()
-
-        if success:
-            self.load_assessments()
-            self.show_success_dialog("Assessment deleted successfully!")
-        else:
-            self.show_error_dialog("Failed to delete assessment.")
-
-    def show_success_dialog(self, message):
-        """Show a success dialog."""
-        self.success_dialog = MDDialog(
-            MDDialogHeadlineText(text="Success"),
-            MDDialogContentContainer(
-                MDLabel(text=message)
-            ),
-            MDDialogButtonContainer(
-                MDButton(
-                    MDButtonText(text="OK"),
-                    style="text",
-                    on_release=lambda x: self.success_dialog.dismiss()
-                )
-            )
-        )
-        self.success_dialog.open()
-
-    def show_error_dialog(self, message):
-        """Show an error dialog."""
-        self.error_dialog = MDDialog(
-            MDDialogHeadlineText(text="Error"),
-            MDDialogContentContainer(
-                MDLabel(text=message)
-            ),
-            MDDialogButtonContainer(
-                MDButton(
-                    MDButtonText(text="OK"),
-                    style="text",
-                    on_release=lambda x: self.error_dialog.dismiss()
-                )
-            )
-        )
-        self.error_dialog.open()
+        return content

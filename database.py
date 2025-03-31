@@ -25,7 +25,9 @@ def create_tables():
             sex TEXT CHECK(sex IN ('Male', 'Female')),
             castrated TEXT CHECK(castrated IN ('Yes','No')),
             current_weight REAL,
-            image_path TEXT
+            image_path TEXT,
+            target_weight REAL,
+            target_date TEXT
         )
     ''')
 
@@ -49,6 +51,18 @@ def create_tables():
             FOREIGN KEY (animal_id) REFERENCES animals(id)
         )
     ''')
+
+    # Check if we need to update the schema to add target_weight and target_date
+    cursor.execute("PRAGMA table_info(animals)")
+    columns = [col[1] for col in cursor.fetchall()]
+
+    if 'target_weight' not in columns:
+        cursor.execute('ALTER TABLE animals ADD COLUMN target_weight REAL')
+        print("Added target_weight column to animals table")
+
+    if 'target_date' not in columns:
+        cursor.execute('ALTER TABLE animals ADD COLUMN target_date TEXT')
+        print("Added target_date column to animals table")
 
     conn.commit()
     conn.close()

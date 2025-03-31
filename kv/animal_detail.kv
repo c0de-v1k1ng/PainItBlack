@@ -1,5 +1,5 @@
 <AnimalDetailScreen@MDScreen>:
-    md_bg_color: self.theme_cls.backgroundColor  # ✅ Fix
+    md_bg_color: self.theme_cls.backgroundColor
 
     MDBoxLayout:
         orientation: "vertical"
@@ -32,21 +32,25 @@
                 # Basic animal info card
                 MDCard:
                     orientation: "horizontal"
-                    padding: dp(12)
-                    spacing: dp(12)
+                    padding: dp(16)
+                    spacing: dp(16)
                     size_hint_y: None
-                    height: max(self.minimum_height, dp(160))
+                    height: max(self.minimum_height, dp(180))  # Increased height
 
                     FitImage:
                         id: animal_image
                         size_hint: None, None
                         size: dp(120), dp(120)
-                        allow_stretch: True
                         radius: dp(8)
+                        fit_mode: "contain"
 
                     MDBoxLayout:
                         orientation: "vertical"
                         spacing: dp(4)
+                        adaptive_height: True
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [0, dp(4), 0, dp(4)]
 
                         MDLabel:
                             id: animal_name
@@ -84,6 +88,22 @@
                             id: animal_weight
                             text: "Initial weight: Unknown"
                             adaptive_height: True
+
+                # Weight Target card
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(12)
+                    spacing: dp(8)
+                    size_hint_y: None
+                    height: self.minimum_height
+
+                    MDBoxLayout:
+                        id: target_container
+                        orientation: "vertical"
+                        adaptive_height: True
+                        size_hint_y: None
+                        height: self.minimum_height
+                        # Will be filled programmatically
 
                 # Weight history card
                 MDCard:

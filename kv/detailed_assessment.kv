@@ -1,0 +1,122 @@
+<DetailedAssessmentScreen@MDScreen>:
+    md_bg_color: self.theme_cls.backgroundColor
+
+    MDBoxLayout:
+        orientation: "vertical"
+
+        MDTopAppBar:
+            type: "small"
+
+            MDTopAppBarLeadingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "arrow-left"
+                    on_release: app.switch_screen('assessments')
+
+            MDTopAppBarTitle:
+                text: "Detailed Assessment"
+                pos_hint: {"center_x": .5}
+
+        MDBoxLayout:
+            orientation: "vertical"
+            padding: dp(16)
+            spacing: dp(16)
+
+            # Header information
+            MDCard:
+                orientation: "vertical"
+                padding: dp(16)
+                spacing: dp(8)
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDLabel:
+                    id: assessment_title
+                    text: "Assessment Scale"
+                    font_style: "Display"
+                    role: "medium"
+                    halign: "center"
+                    adaptive_height: True
+
+                MDLabel:
+                    id: animal_info
+                    text: "Animal Name (Species)"
+                    halign: "center"
+                    adaptive_height: True
+
+                # Progress bar and text
+                MDBoxLayout:
+                    orientation: "vertical"
+                    adaptive_height: True
+                    spacing: dp(4)
+                    padding: [0, dp(8), 0, 0]
+
+                    MDLabel:
+                        id: progress_text
+                        text: "Question 1 of 5"
+                        halign: "center"
+                        adaptive_height: True
+                        font_style: "Body"
+                        role: "small"
+
+                    MDLinearProgressIndicator:
+                        id: progress_bar
+                        value: 20
+                        size_hint_y: None
+                        height: dp(4)
+
+            # Question container
+            MDCard:
+                orientation: "vertical"
+                padding: dp(16)
+                spacing: dp(8)
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDBoxLayout:
+                    id: question_container
+                    orientation: "vertical"
+                    adaptive_height: True
+                    spacing: dp(8)
+                    # This will be populated in code
+
+            # Options container
+            MDCard:
+                orientation: "vertical"
+                padding: dp(16)
+                spacing: dp(12)
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDBoxLayout:
+                    id: options_container
+                    orientation: "vertical"
+                    adaptive_height: True
+                    spacing: dp(8)
+                    # This will be populated in code
+
+            # Navigation buttons
+            MDBoxLayout:
+                orientation: "horizontal"
+                spacing: dp(16)
+                size_hint_y: None
+                height: dp(48)
+                padding: [0, dp(8), 0, dp(8)]
+
+                MDButton:
+                    style: "elevated"
+                    on_release: root.prev_question()
+                    disabled: root.current_question_idx == 0
+
+                    MDButtonText:
+                        text: "Previous"
+
+                Widget:
+                    # Spacer
+
+                MDButton:
+                    style: "elevated"
+                    on_release: root.next_question()
+                    disabled: root.current_question_idx >= len(root.answers) or root.answers[root.current_question_idx] is None
+
+                    MDButtonText:
+                        text: "Next" if root.current_question_idx < root.total_questions - 1 else "Finish"

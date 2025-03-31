@@ -1,6 +1,7 @@
 import json
 
 from kivy.uix.screenmanager import Screen
+from kivymd.uix.card import MDCard
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDButton, MDButtonText
@@ -664,9 +665,13 @@ class AnimalDetailScreen(MDScreen):
         conn.close()
 
         if not assessments:
-            self.ids.assessments_container.add_widget(
-                MDLabel(text="No assessments found", halign="center")
+            empty_label = MDLabel(
+                text="No assessments found",
+                halign="center",
+                size_hint_y=None,
+                height=dp(40)
             )
+            self.ids.assessments_container.add_widget(empty_label)
             return
 
         # Add assessment entries
@@ -682,35 +687,68 @@ class AnimalDetailScreen(MDScreen):
                 # Not JSON or parsing failed, use raw text
                 result_display = result
 
-            entry = MDBoxLayout(
+            # Create a card for each assessment to better contain the content
+            card = MDCard(
                 orientation="vertical",
-                adaptive_height=True,
-                padding=("8dp", "8dp", "8dp", "8dp"),
-                spacing="4dp"
+                size_hint_y=None,
+                height=dp(120),  # Fixed initial height
+                padding=dp(8),
+                elevation=1
             )
 
+            # Header with date and scale
             header = MDBoxLayout(
                 orientation="horizontal",
-                adaptive_height=True
+                size_hint_y=None,
+                height=dp(40),
+                padding=[0, dp(4), 0, dp(4)]
             )
 
-            date_label = MDLabel(text=f"Date: {date}", size_hint_x=0.6)
-            scale_label = MDLabel(text=f"Scale: {scale}", size_hint_x=0.4)
+            date_label = MDLabel(
+                text=f"Date: {date}",
+                size_hint_x=0.5,
+                font_style="Body",
+                role="medium"
+            )
+
+            scale_label = MDLabel(
+                text=f"Scale: {scale}",
+                size_hint_x=0.5,
+                font_style="Body",
+                role="medium"
+            )
 
             header.add_widget(date_label)
             header.add_widget(scale_label)
 
-            result_label = MDLabel(text=f"Result: {result_display}")
-
-            entry.add_widget(header)
-            entry.add_widget(result_label)
-
-            # Add divider
-            divider = MDBoxLayout(
+            # Result section
+            result_box = MDBoxLayout(
+                orientation="vertical",
                 size_hint_y=None,
-                height=dp(1),
-                md_bg_color=get_color_from_hex("#CCCCCC")
+                height=dp(60),
+                padding=[dp(4), dp(4), dp(4), dp(4)]
             )
 
-            self.ids.assessments_container.add_widget(entry)
-            self.ids.assessments_container.add_widget(divider)
+            result_label = MDLabel(
+                text=f"Result: {result_display}",
+                font_style="Body",
+                role="small",
+                size_hint_y=None,
+                height=dp(60)
+            )
+
+            result_box.add_widget(result_label)
+
+            # Add the header and result to the card
+            card.add_widget(header)
+            card.add_widget(result_box)
+
+            # Add the card to the container
+            self.ids.assessments_container.add_widget(card)
+
+            # Add spacing between cards
+            spacer = MDBoxLayout(
+                size_hint_y=None,
+                height=dp(8)
+            )
+            self.ids.assessments_container.add_widget(spacer)

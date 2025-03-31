@@ -1,4 +1,7 @@
 from kivy.uix.screenmanager import Screen
+from kivy.uix.scrollview import ScrollView
+from kivy.utils import get_color_from_hex
+from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.list import MDList, MDListItem, MDListItemHeadlineText, MDListItemSupportingText
@@ -358,29 +361,47 @@ class AssessmentsScreen(MDScreen):
             # Not JSON or parsing failed, use simple display
             content = self.create_simple_assessment_content(assessment)
 
-        # Show dialog
-        self.detail_dialog = MDDialog(
-            MDDialogHeadlineText(text="Assessment Details"),
-            MDDialogContentContainer(content),
-            MDDialogButtonContainer(
-                MDButton(
-                    MDButtonText(text="View Animal"),
-                    style="outlined",
-                    on_release=lambda x: self.view_animal(animal_id)
-                ),
-                MDButton(
-                    MDButtonText(text="Delete", text_color="red"),
-                    style="text",
-                    on_release=lambda x: self.confirm_delete_assessment(assessment_id),
+        # Create button container with balanced spacing
+        buttons = MDDialogButtonContainer(
+            #adaptive_width=True,
+            spacing=dp(8),
+            padding=[dp(8), dp(8), dp(8), dp(8)]
+        )
 
-                ),
-                MDButton(
-                    MDButtonText(text="Close"),
-                    style="text",
-                    on_release=lambda x: self.detail_dialog.dismiss()
-                ),
-                spacing="8dp"
-            )
+        # Create individual buttons with proper spacing
+        view_button = MDButton(
+            style="outlined",
+            on_release=lambda x: self.view_animal(animal_id)
+        )
+        view_button.add_widget(MDButtonText(text="View Animal"))
+
+        delete_button = MDButton(
+            style="text",
+            on_release=lambda x: self.confirm_delete_assessment(assessment_id)
+        )
+        delete_button.add_widget(MDButtonText(text="Delete", text_color="red"))
+
+        close_button = MDButton(
+            style="text",
+            on_release=lambda x: self.detail_dialog.dismiss()
+        )
+        close_button.add_widget(MDButtonText(text="Close"))
+
+        # Add buttons to container
+        buttons.add_widget(view_button)
+        buttons.add_widget(delete_button)
+        buttons.add_widget(close_button)
+
+        # Show dialog with better sizing
+        self.detail_dialog = MDDialog(
+            MDDialogHeadlineText(
+                text="Assessment Details",
+                halign="center"
+            ),
+            MDDialogContentContainer(content),
+            buttons,
+            size_hint=(0.9, None),  # Allow dialog to be wider
+            # Let height be determined automatically
         )
         self.detail_dialog.open()
 
@@ -388,47 +409,177 @@ class AssessmentsScreen(MDScreen):
         """Format JSON assessment result for display."""
         content = MDBoxLayout(
             orientation="vertical",
-            spacing="8dp",
-            padding=["16dp", "16dp", "16dp", "16dp"],
-            adaptive_height=True
+            spacing=dp(12),
+            padding=[dp(16), dp(16), dp(16), dp(16)],
+            adaptive_height=True,
+            size_hint_y=None,
+            # Calculate height based on content but ensure minimum height
+            height=dp(400)  # Start with a reasonable height
+        )
+
+        # Create a scrollable container for all content to handle overflow
+        scroll_container = ScrollView(
+            size_hint=(1, None),
+            height=dp(360)  # Fixed height for scroll area
+        )
+
+        scroll_content = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(12),
+            adaptive_height=True,
+            size_hint_y=None
         )
 
         # Add animal and scale info
-        content.add_widget(MDLabel(text=f"Animal: {animal_name} ({animal_species})"))
-        content.add_widget(MDLabel(text=f"Date: {date}"))
-        content.add_widget(MDLabel(text=f"Assessment Scale: {scale}"))
+        info_box = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(4),
+            adaptive_height=True,
+            size_hint_y=None
+        )
+
+        info_box.add_widget(MDLabel(
+            text=f"Animal: {animal_name} ({animal_species})",
+            adaptive_height=True,
+            size_hint_y=None,
+            height=dp(24)
+        ))
+
+        info_box.add_widget(MDLabel(
+            text=f"Date: {date}",
+            adaptive_height=True,
+            size_hint_y=None,
+            height=dp(24)
+        ))
+
+        info_box.add_widget(MDLabel(
+            text=f"Assessment Scale: {scale}",
+            adaptive_height=True,
+            size_hint_y=None,
+            height=dp(24)
+        ))
+
+        scroll_content.add_widget(info_box)
+
+        # Add divider
+        divider = MDBoxLayout(
+            size_hint_y=None,
+            height=dp(1),
+            md_bg_color=get_color_from_hex("#CCCCCC")
+        )
+        scroll_content.add_widget(divider)
 
         # Add score and interpretation if available
-        if "score" in result_data:
-            score_label = MDLabel(text=f"Score: {result_data['score']}")
-            content.add_widget(score_label)
+        if "score" in result_data or "interpretation" in result_data:
+            result_box = MDBoxLayout(
+                orientation="vertical",
+                spacing=dp(4),
+                adaptive_height=True,
+                size_hint_y=None
+            )
 
-        if "interpretation" in result_data:
-            interp_label = MDLabel(text=f"Result: {result_data['interpretation']}")
-            content.add_widget(interp_label)
+            if "score" in result_data:
+                result_box.add_widget(MDLabel(
+                    text=f"Score: {result_data['score']}",
+                    font_style="Title",
+                    role="medium",
+                    adaptive_height=True,
+                    size_hint_y=None,
+                    height=dp(30)
+                ))
+
+            if "interpretation" in result_data:
+                # Get appropriate color based on interpretation text
+                color = get_color_from_hex("#4CAF50")  # Default green
+                if "moderate" in result_data["interpretation"].lower():
+                    color = get_color_from_hex("#FF9800")  # Orange
+                elif "severe" in result_data["interpretation"].lower() or "urgent" in result_data[
+                    "interpretation"].lower():
+                    color = get_color_from_hex("#F44336")  # Red
+
+                result_box.add_widget(MDLabel(
+                    text=f"Result: {result_data['interpretation']}",
+                    font_style="Title",
+                    role="small",
+                    theme_text_color="Custom",
+                    text_color=color,
+                    adaptive_height=True,
+                    size_hint_y=None,
+                    height=dp(30)
+                ))
+
+            scroll_content.add_widget(result_box)
+
+            # Add another divider
+            scroll_content.add_widget(MDBoxLayout(
+                size_hint_y=None,
+                height=dp(1),
+                md_bg_color=get_color_from_hex("#CCCCCC")
+            ))
 
         # Add details if available
         if "details" in result_data and isinstance(result_data["details"], list):
-            content.add_widget(MDLabel(text="Assessment Details:", font_style="Title", role="small"))
+            details_label = MDLabel(
+                text="Assessment Details:",
+                font_style="Title",
+                role="small",
+                adaptive_height=True,
+                size_hint_y=None,
+                height=dp(40)
+            )
+            scroll_content.add_widget(details_label)
 
             for detail in result_data["details"]:
                 if isinstance(detail, dict):
-                    detail_box = MDBoxLayout(
+                    detail_box = MDCard(
                         orientation="vertical",
                         adaptive_height=True,
-                        padding=("8dp", "4dp")
+                        size_hint_y=None,
+                        height=dp(80),
+                        padding=[dp(12), dp(8), dp(12), dp(8)],
+                        margin=dp(4),
+                        elevation=1
                     )
 
                     if "question" in detail:
-                        detail_box.add_widget(MDLabel(text=detail["question"], font_style="Body", role="medium"))
+                        question_label = MDLabel(
+                            text=detail["question"],
+                            font_style="Body",
+                            role="medium",
+                            adaptive_height=True,
+                            size_hint_y=None,
+                            height=dp(24)
+                        )
+                        detail_box.add_widget(question_label)
 
                     if "answer" in detail:
                         answer_text = f"Answer: {detail['answer']}"
                         if "score" in detail:
                             answer_text += f" (Score: {detail['score']})"
-                        detail_box.add_widget(MDLabel(text=answer_text, font_style="Body", role="small"))
 
-                    content.add_widget(detail_box)
+                        answer_label = MDLabel(
+                            text=answer_text,
+                            font_style="Body",
+                            role="small",
+                            adaptive_height=True,
+                            size_hint_y=None,
+                            height=dp(24)
+                        )
+                        detail_box.add_widget(answer_label)
+
+                    scroll_content.add_widget(detail_box)
+
+                    # Add spacing after each detail item
+                    scroll_content.add_widget(MDBoxLayout(
+                        size_hint_y=None,
+                        height=dp(4)
+                    ))
+
+        # Add the scroll content to the scroll container
+        scroll_container.add_widget(scroll_content)
+
+        # Add the scroll container to the main content box
+        content.add_widget(scroll_container)
 
         return content
 
@@ -436,15 +587,98 @@ class AssessmentsScreen(MDScreen):
         """Create simple content display for non-JSON assessment result."""
         content = MDBoxLayout(
             orientation="vertical",
-            spacing="8dp",
-            padding=["16dp", "16dp", "16dp", "16dp"],
-            adaptive_height=True
+            spacing=dp(12),
+            padding=[dp(16), dp(16), dp(16), dp(16)],
+            adaptive_height=True,
+            size_hint_y=None,
+            height=dp(200)  # Fixed height for simple content
         )
 
-        # Add assessment details
-        content.add_widget(MDLabel(text=f"Animal: {assessment[3]} ({assessment[4]})"))
-        content.add_widget(MDLabel(text=f"Date: {assessment[0]}"))
-        content.add_widget(MDLabel(text=f"Assessment Scale: {assessment[1]}"))
-        content.add_widget(MDLabel(text=f"Result: {assessment[2]}"))
+        # Add assessment details with better spacing
+        content.add_widget(MDLabel(
+            text=f"Animal: {assessment[3]} ({assessment[4]})",
+            adaptive_height=True,
+            size_hint_y=None,
+            height=dp(30)
+        ))
+
+        content.add_widget(MDLabel(
+            text=f"Date: {assessment[0]}",
+            adaptive_height=True,
+            size_hint_y=None,
+            height=dp(30)
+        ))
+
+        content.add_widget(MDLabel(
+            text=f"Assessment Scale: {assessment[1]}",
+            adaptive_height=True,
+            size_hint_y=None,
+            height=dp(30)
+        ))
+
+        content.add_widget(MDLabel(
+            text=f"Result: {assessment[2]}",
+            adaptive_height=True,
+            size_hint_y=None,
+            height=dp(60)  # Taller to accommodate longer text
+        ))
 
         return content
+
+    def view_animal(self, animal_id):
+        """Navigate to animal details screen."""
+        if self.detail_dialog:
+            self.detail_dialog.dismiss()
+
+        # Get the app instance
+        from kivymd.app import MDApp
+        app = MDApp.get_running_app()
+
+        # Access the animal detail screen and set the animal ID
+        animal_detail_screen = app.screen_manager.get_screen('animal_detail')
+        animal_detail_screen.set_animal_id(animal_id)
+
+        # Switch to the animal detail screen
+        app.switch_screen('animal_detail')
+
+    def confirm_delete_assessment(self, assessment_id):
+        """Confirm before deleting an assessment."""
+        # Dismiss the detail dialog if it's open
+        if self.detail_dialog:
+            self.detail_dialog.dismiss()
+
+        # Create confirmation dialog
+        self.confirm_dialog = MDDialog(
+            MDDialogHeadlineText(text="Confirm Deletion"),
+            MDDialogContentContainer(
+                MDLabel(text="Are you sure you want to delete this assessment?")
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Cancel"),
+                    style="text",
+                    on_release=lambda x: self.confirm_dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Delete"),
+                    style="elevated",
+                    on_release=lambda x: self.delete_assessment(assessment_id)
+                ),
+                spacing="8dp"
+            ),
+            auto_dismiss=False
+        )
+        self.confirm_dialog.open()
+
+    def delete_assessment(self, assessment_id):
+        """Delete the assessment from the database."""
+        success = database.delete_assessment(assessment_id)
+
+        if self.confirm_dialog:
+            self.confirm_dialog.dismiss()
+
+        if success:
+            self.load_assessments()
+            self.show_success_dialog("Assessment deleted successfully!")
+        else:
+            self.show_error_dialog("Failed to delete assessment.")

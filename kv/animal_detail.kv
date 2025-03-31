@@ -93,10 +93,10 @@
                 MDCard:
                     id: target_container
                     orientation: "vertical"
-                    size_hint_y: None
-                    height: self.minimum_height
                     padding: dp(16)
                     spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
 
 
 
@@ -167,8 +167,8 @@
 
                         MDButton:
                             style: "filled"
-                            on_release:
-                                app.screen_manager.get_screen("assessments").show_new_assessment_dialog(animal_id=root.animal_id)
+                            on_release: app.screen_manager.get_screen("assessments").show_new_assessment_dialog(animal_id=root.animal_id)
+
                             size_hint_x: 0.3
                             MDButtonText:
                                 text: "Add"

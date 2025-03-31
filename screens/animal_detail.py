@@ -1,5 +1,6 @@
 import json
 
+from kivy.graphics import Color, Ellipse
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
 from kivymd.uix.card import MDCard
@@ -266,23 +267,29 @@ class AnimalDetailScreen(MDScreen):
 
         # If we have a target weight, display it
         if self.target_weight and self.target_date:
+
             target_info = MDBoxLayout(
                 orientation="vertical",
-                adaptive_height=True,
                 padding=(dp(16), dp(8), dp(16), dp(16)),
-                spacing="4dp"
+                spacing="4dp",
+                size_hint_y=None
             )
+            target_info.height = target_info.minimum_height
 
             target_info.add_widget(MDLabel(
                 text=f"Target Weight: {self.target_weight} kg",
                 font_style="Body",
-                role="medium"
+                role="medium",
+                size_hint_y=None,
+                height=dp(24)
             ))
 
             target_info.add_widget(MDLabel(
                 text=f"Target Date: {self.target_date}",
                 font_style="Body",
-                role="medium"
+                role="medium",
+                size_hint_y=None,
+                height=dp(24)
             ))
 
             # Calculate progress if we have current weight
@@ -374,7 +381,7 @@ class AnimalDetailScreen(MDScreen):
             x_ticks_major=1,
             y_ticks_major=(y_max - y_min) / 5,
             y_grid_label=True,
-            x_grid_label=True,  # Keep default labels for now
+            x_grid_label=True,
             padding=5,
             x_grid=True,
             y_grid=True,
@@ -383,18 +390,30 @@ class AnimalDetailScreen(MDScreen):
             ymin=y_min,
             ymax=y_max,
             size_hint_y=None,
-            height=dp(200)
+            height=dp(300)  # Increased for better visibility
         )
 
         # Create the main weight plot
         plot = MeshLinePlot(color=get_color_from_hex('#4f46e5'))
         plot.points = [(i, weights[i]) for i in range(len(weights))]
+        plot.line_width = 4  # Thicker line
         graph.add_plot(plot)
+
+        # Add data points:
+        # Add dots for data points
+        for i, y in enumerate(weights):
+            with graph.canvas.after:
+                Color(rgba=get_color_from_hex('#4f46e5'))
+                d = dp(6)  # diameter
+                x_px = graph.x + graph.width * ((i - graph.xmin) / (graph.xmax - graph.xmin))
+                y_px = graph.y + graph.height * ((y - graph.ymin) / (graph.ymax - graph.ymin))
+                Ellipse(pos=(x_px - d / 2, y_px - d / 2), size=(d, d))
 
         # Add target weight line if available
         if self.target_weight:
             target_plot = MeshLinePlot(color=get_color_from_hex('#4CAF50'))
             target_plot.points = [(0, self.target_weight), (len(dates) - 1, self.target_weight)]
+            target_plot.line_width = 4  # Thicker line
             graph.add_plot(target_plot)
 
         # Create graph container
@@ -404,7 +423,7 @@ class AnimalDetailScreen(MDScreen):
             padding=("8dp", "16dp", "8dp", "16dp"),
             spacing="8dp",
             size_hint_y=None,
-            height=dp(280)  # Increased height for date labels
+            height=dp(320)
         )
 
         # Add a title
@@ -429,29 +448,21 @@ class AnimalDetailScreen(MDScreen):
             padding=("0dp", "0dp", "0dp", "0dp")
         )
 
-        # Format dates for display
         formatted_dates = [self.format_date_for_display(date) for date in dates]
 
-        # Select which dates to display based on total number
         displayed_dates = []
         if len(formatted_dates) <= 5:
-            # If 5 or fewer dates, show all
             displayed_dates = formatted_dates
         else:
-            # Show first, last, and some in between
             step = max(1, len(formatted_dates) // 5)
             indices = list(range(0, len(formatted_dates), step))
             if len(formatted_dates) - 1 not in indices:
-                indices.append(len(formatted_dates) - 1)  # Always add the last index
+                indices.append(len(formatted_dates) - 1)
 
-            # Create a list of empty strings with the correct length
             displayed_dates = [""] * len(formatted_dates)
-
-            # Fill in only the selected indices
             for idx in indices:
                 displayed_dates[idx] = formatted_dates[idx]
 
-        # Add date labels
         for date_text in displayed_dates:
             date_label = MDLabel(
                 text=date_text,
@@ -462,10 +473,8 @@ class AnimalDetailScreen(MDScreen):
             )
             date_labels_container.add_widget(date_label)
 
-        # Add date labels container
         graph_container.add_widget(date_labels_container)
 
-        # Add a legend if we have a target weight
         if self.target_weight:
             legend_container = MDBoxLayout(
                 orientation="horizontal",
@@ -474,7 +483,6 @@ class AnimalDetailScreen(MDScreen):
                 padding=("8dp", "4dp", "8dp", "4dp")
             )
 
-            # Weight history legend item
             history_box = MDBoxLayout(
                 orientation="horizontal",
                 adaptive_height=True,
@@ -497,7 +505,6 @@ class AnimalDetailScreen(MDScreen):
             history_box.add_widget(history_color)
             history_box.add_widget(history_label)
 
-            # Target weight legend item
             target_box = MDBoxLayout(
                 orientation="horizontal",
                 adaptive_height=True,
@@ -525,10 +532,8 @@ class AnimalDetailScreen(MDScreen):
 
             graph_container.add_widget(legend_container)
 
-        # Add the graph container to the layout
         self.ids.weight_graph_container.add_widget(graph_container)
 
-        # Save references for later updates
         self.graph = graph
         self.plot = plot
 
@@ -771,3 +776,77 @@ class AnimalDetailScreen(MDScreen):
             ),
         )
         self.dialog.open()
+
+    def show_add_weight_dialog(self):
+        """Show dialog to add a new weight entry."""
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        content = MDBoxLayout(
+            orientation="vertical",
+            spacing="16dp",
+            adaptive_height=True,
+            padding=["16dp", "16dp", "16dp", "0dp"]
+        )
+
+        # Weight input
+        weight_field = MDTextField(
+            hint_text="Weight (kg)",
+            mode="outlined",
+            input_filter="float"
+        )
+        content.add_widget(weight_field)
+
+        # Date input (default to today)
+        date_field = MDTextField(
+            hint_text="Date (YYYY-MM-DD)",
+            mode="outlined",
+            text=today
+        )
+        content.add_widget(date_field)
+
+        self.weight_dialog = MDDialog(
+            MDDialogHeadlineText(text="Add Weight Record"),
+            MDDialogContentContainer(content),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Cancel"),
+                    style="text",
+                    on_release=lambda x: self.weight_dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Add"),
+                    style="text",
+                    on_release=lambda x: self.save_weight_record(weight_field.text, date_field.text)
+                ),
+                spacing="8dp"
+            ),
+            auto_dismiss=False
+        )
+        self.weight_dialog.open()
+
+    def save_weight_record(self, weight_text, date_text):
+        """Validate and save new weight entry."""
+        try:
+            weight = float(weight_text)
+            if weight <= 0:
+                self.show_error_dialog("Weight must be a positive number.")
+                return
+
+            # Validate date
+            try:
+                datetime.strptime(date_text, "%Y-%m-%d")
+            except ValueError:
+                self.show_error_dialog("Invalid date format. Use YYYY-MM-DD.")
+                return
+
+            success = database.add_weight_record(self.animal_id, date_text, weight)
+            if success:
+                self.weight_dialog.dismiss()
+                self.load_weight_history()
+                self.show_success_dialog("Weight record added successfully.")
+            else:
+                self.show_error_dialog("Failed to save weight. Please try again.")
+
+        except ValueError:
+            self.show_error_dialog("Please enter a valid weight.")
+

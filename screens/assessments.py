@@ -105,11 +105,8 @@ class AssessmentsScreen(MDScreen):
         """Handle assessment item click event"""
         self.show_assessment_details(assessment_id, animal_id)
 
-    def show_new_assessment_dialog(self, *args, animal_id=None):
+    def show_new_assessment_dialog(self, animal_id=None):
         """Show dialog to create a new assessment, optionally preselecting an animal."""
-        # Fix Kivy misinterpreting the first arg as animal_id
-        if len(args) == 1 and isinstance(args[0], int) and animal_id is None:
-            animal_id = args[0]
 
         # Get a list of all animals
         conn = database.get_db_connection()
@@ -119,7 +116,6 @@ class AssessmentsScreen(MDScreen):
         conn.close()
 
         if not animals:
-            # Show error if no animals available
             self.dialog = MDDialog(
                 MDDialogHeadlineText(text="No Animals"),
                 MDDialogContentContainer(
@@ -172,7 +168,6 @@ class AssessmentsScreen(MDScreen):
             ),
             auto_dismiss=False
         )
-
         self.dialog.open()
 
         # Preselect the given animal if provided
@@ -181,44 +176,6 @@ class AssessmentsScreen(MDScreen):
                 if a_id == animal_id:
                     self.select_animal_for_assessment(a_id, name, species)
                     break
-
-        # Create dialog for animal selection
-        content = MDBoxLayout(
-            orientation="vertical",
-            spacing="12dp",
-            padding=["20dp", "20dp", "20dp", "20dp"],
-            adaptive_height=True
-        )
-
-        # Create animal selection dropdown
-        self.animal_field = MDTextField(
-            hint_text="Select Animal",
-            mode="outlined",
-            id="animal_selector"
-        )
-        self.animal_field.bind(focus=self.show_animal_menu)
-        content.add_widget(self.animal_field)
-
-        # Create the dialog
-        self.dialog = MDDialog(
-            MDDialogHeadlineText(text="New Assessment"),
-            MDDialogContentContainer(content),
-            MDDialogButtonContainer(
-                MDButton(
-                    MDButtonText(text="Cancel"),
-                    style="text",
-                    on_release=lambda x: self.dialog.dismiss()
-                ),
-                MDButton(
-                    MDButtonText(text="Continue"),
-                    style="text",
-                    on_release=lambda x: self.continue_assessment()
-                ),
-                spacing="8dp"
-            ),
-            auto_dismiss=False
-        )
-        self.dialog.open()
 
     def show_animal_menu(self, field_widget, focus):
         """Show dropdown menu for animal selection"""

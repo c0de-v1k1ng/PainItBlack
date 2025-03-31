@@ -9,6 +9,7 @@ from screens.home import HomeScreen
 from screens.species_detail import SpeciesDetailScreen
 from screens.my_animals import MyAnimalsScreen
 from screens.add_animal import AddAnimalScreen
+from screens.edit_animal import EditAnimalScreen  # Import the new screen
 from screens.assessments import AssessmentsScreen
 from screens.animal_detail import AnimalDetailScreen
 
@@ -36,7 +37,7 @@ class MainApp(MDApp):
 
         # Load all kv files dynamically
         for kv_file in ['home.kv', 'species_detail.kv', 'my_animals.kv', 'assessments.kv',
-                        'add_animal.kv', 'animal_detail.kv']:
+                        'add_animal.kv', 'edit_animal.kv', 'animal_detail.kv']:  # Added edit_animal.kv
             Builder.load_file(f'kv/{kv_file}')
             print(f"✅ Loaded kv: {kv_file}")
 
@@ -52,6 +53,7 @@ class MainApp(MDApp):
         self.screen_manager.add_widget(MyAnimalsScreen(name='my_animals'))
         self.screen_manager.add_widget(AssessmentsScreen(name='assessments'))
         self.screen_manager.add_widget(AddAnimalScreen(name='add_animal'))
+        self.screen_manager.add_widget(EditAnimalScreen(name='edit_animal'))  # Added edit animal screen
         self.screen_manager.add_widget(AnimalDetailScreen(name='animal_detail'))
 
         # Set up active navigation item tracking
@@ -96,8 +98,9 @@ class MainApp(MDApp):
 
     def edit_animal(self, animal_id):
         """Navigate to edit animal screen with the specified animal."""
-        # This will be implemented when we add animal editing functionality
-        print(f"Edit animal {animal_id}")
+        edit_screen = self.screen_manager.get_screen('edit_animal')
+        edit_screen.set_animal_id(animal_id)
+        self.screen_manager.current = 'edit_animal'
 
     def new_assessment(self, animal_id):
         """Navigate to assessment screen for the specified animal."""

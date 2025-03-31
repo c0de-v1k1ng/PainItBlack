@@ -82,7 +82,7 @@
 
                         MDLabel:
                             id: animal_weight
-                            text: "Current Weight: Unknown"
+                            text: "Initial weight: Unknown"
                             adaptive_height: True
 
                 # Weight history card
@@ -110,6 +110,15 @@
 
                             MDButtonText:
                                 text: "Add Weight"
+
+
+                    # Container for weight graph - will be populated in code
+                    MDBoxLayout:
+                        id: weight_graph_container
+                        orientation: "vertical"
+                        adaptive_height: True
+                        size_hint_y: None
+                        height: self.minimum_height
 
                     MDBoxLayout:
                         id: weight_history_container

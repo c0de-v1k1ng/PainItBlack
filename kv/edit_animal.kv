@@ -1,0 +1,139 @@
+<EditAnimalScreen@MDScreen>:
+    md_bg_color: self.theme_cls.backgroundColor
+
+    MDScreen:
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: "8dp"
+            padding: "16dp"
+
+            MDTopAppBar:
+                type: "small"
+
+                MDTopAppBarLeadingButtonContainer:
+                    MDActionTopAppBarButton:
+                        icon: "arrow-left"
+                        on_release: app.switch_screen('animal_detail')
+
+                MDTopAppBarTitle:
+                    text: "Edit Animal"
+                    pos_hint: {"center_x": .5}
+
+            MDScrollView:
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: "12dp"
+                    padding: "8dp"
+                    adaptive_height: True
+                    size_hint_y: None
+
+                    MDTextField:
+                        id: animal_name
+                        hint_text: "Animal Name"
+                        mode: "outlined"
+                        MDTextFieldHintText:
+                            text: "Animal ID"
+
+                    MDBoxLayout:
+                        spacing: "12dp"
+                        adaptive_height: True
+
+                        MDTextField:
+                            id: species_dropdown
+                            hint_text: "Species"
+                            mode: "outlined"
+                            on_focus: root.show_species_menu() if self.focus else None
+                            MDTextFieldHintText:
+                                text: "Species"
+
+                        MDTextField:
+                            id: animal_breed
+                            hint_text: "Breed"
+                            mode: "outlined"
+                            MDTextFieldHintText:
+                                text: "Breed"
+
+                    MDBoxLayout:
+                        spacing: "12dp"
+                        adaptive_height: True
+
+                        MDTextField:
+                            id: animal_birth_date
+                            hint_text: "Birthday"
+                            mode: "outlined"
+                            on_focus: root.show_date_picker(self)
+                            MDTextFieldHintText:
+                                text: "Birthdate"
+
+                        MDTextField:
+                            id: sex_dropdown
+                            hint_text: "Sex"
+                            mode: "outlined"
+                            on_focus: root.show_sex_menu() if self.focus else None
+                            MDTextFieldHintText:
+                                text: "Sex"
+
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            spacing: "8dp"
+                            adaptive_height: True
+                            MDCheckbox:
+                                id: animal_castrated
+                                size_hint: None, None
+                                size: "36dp", "36dp"
+                            MDLabel:
+                                text: "Castrated"
+                                valign: "middle"
+
+                    MDBoxLayout:
+                        spacing: "12dp"
+                        adaptive_height: True
+
+                        MDTextField:
+                            id: animal_weight
+                            hint_text: "Weight (kg)"
+                            mode: "outlined"
+                            input_filter: "float"
+                            MDTextFieldHintText:
+                                text: "Weight (kg)"
+
+                    MDBoxLayout:
+                        spacing: "12dp"
+                        adaptive_height: True
+
+                        MDButton:
+                            style: "elevated"
+                            size_hint_y: None
+                            height: "48dp"
+                            on_release: root.show_file_chooser()
+
+                            MDButtonText:
+                                text: "Choose Photo"
+                                font_size: "16sp"
+                                text_color: [1,1,1,1]
+
+                        FitImage:
+                            id: photo_preview
+                            size_hint: None, None
+                            size: "100dp", "100dp"
+                            fit_mode: "contain"
+
+            MDBoxLayout:
+                spacing: "12dp"
+                padding: "8dp"
+                size_hint_y: None
+                height: "64dp"
+
+                MDButton:
+                    style: "elevated"
+                    on_release: root.save_animal()
+
+                    MDButtonText:
+                        text: "Save Changes"
+
+                MDButton:
+                    style: "text"
+                    on_release: app.switch_screen('animal_detail')
+
+                    MDButtonText:
+                        text: "Cancel"

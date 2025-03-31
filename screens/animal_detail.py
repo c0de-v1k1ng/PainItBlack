@@ -6,6 +6,9 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
 from kivymd.uix.fitimage import FitImage
 from kivymd.uix.textfield import MDTextField
+from kivy_garden.graph import Graph, MeshLinePlot
+from kivy.metrics import dp
+from kivy.utils import get_color_from_hex
 
 import database
 import os
@@ -19,6 +22,9 @@ class AnimalDetailScreen(MDScreen):
         super().__init__(**kwargs)
         self.animal_id = None
         self.dialog = None
+        self.weight_data = []
+        self.graph = None
+        self.plot = None
 
     def on_enter(self):
         """Refresh data when entering the screen."""
@@ -82,12 +88,15 @@ class AnimalDetailScreen(MDScreen):
         """Load and display weight history."""
         self.ids.weight_history_container.clear_widgets()
 
+        # Clear any existing weight data
+        self.weight_data = []
+
         conn = database.get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
             SELECT id, date, weight FROM weight_history
-            WHERE animal_id = ? ORDER BY date DESC
+            WHERE animal_id = ? ORDER BY date ASC
         """, (self.animal_id,))
 
         weights = cursor.fetchall()
@@ -99,8 +108,18 @@ class AnimalDetailScreen(MDScreen):
             )
             return
 
+        # Process weight data for the graph
+        dates = []
+        weights_values = []
+
         # Add weight history entries
         for weight_id, date, weight in weights:
+            # Add to the graph data
+            self.weight_data.append((date, weight))
+            dates.append(date)
+            weights_values.append(weight)
+
+            # Create UI entry
             entry = MDBoxLayout(
                 orientation="horizontal",
                 adaptive_height=True,
@@ -121,6 +140,139 @@ class AnimalDetailScreen(MDScreen):
             entry.add_widget(delete_btn)
 
             self.ids.weight_history_container.add_widget(entry)
+
+        # Add weight graph if we have at least 2 data points
+        if len(self.weight_data) >= 2:
+            # Clear any existing graph container
+            if hasattr(self.ids, 'weight_graph_container'):
+                self.ids.weight_graph_container.clear_widgets()
+
+            # Create a graph
+            self.create_weight_graph(dates, weights_values)
+
+    def format_date_for_display(self, date_str):
+        """Convert YYYY-MM-DD to DD.MM for display on graph axis."""
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            return date_obj.strftime("%d.%m.%y")
+        except ValueError:
+            # Try other date formats
+            try:
+                date_obj = datetime.strptime(date_str, "%d.%m.%Y")
+                return date_obj.strftime("%d.%m")
+            except ValueError:
+                return date_str  # Return original if parsing fails
+
+    def create_weight_graph(self, dates, weights):
+        """Create a line graph showing weight over time with dates on x-axis."""
+        # Calculate min/max values for better scaling
+        min_weight = min(weights)
+        max_weight = max(weights)
+        weight_range = max_weight - min_weight
+
+        # Add some padding (10% of range)
+        padding = weight_range * 0.1 if weight_range > 0 else 0.5
+        y_min = max(0, min_weight - padding)  # Ensure not below 0
+        y_max = max_weight + padding
+
+        # Create the graph widget
+        graph = Graph(
+            xlabel='Date',
+            ylabel='Weight (kg)',
+            x_ticks_major=1,
+            y_ticks_major=(y_max - y_min) / 5,
+            y_grid_label=True,
+            x_grid_label=True,  # Keep default labels for now
+            padding=5,
+            x_grid=True,
+            y_grid=True,
+            xmin=0,
+            xmax=len(dates) - 1,
+            ymin=y_min,
+            ymax=y_max,
+            size_hint_y=None,
+            height=dp(200)
+        )
+
+        # Create the plot
+        plot = MeshLinePlot(color=get_color_from_hex('#4f46e5'))
+        plot.points = [(i, weights[i]) for i in range(len(weights))]
+        graph.add_plot(plot)
+
+        # Create graph container
+        graph_container = MDBoxLayout(
+            orientation="vertical",
+            adaptive_height=True,
+            padding=("8dp", "16dp", "8dp", "16dp"),
+            spacing="8dp",
+            size_hint_y=None,
+            height=dp(280)  # Increased height for date labels
+        )
+
+        # Add a title
+        graph_title = MDLabel(
+            text="Weight History Graph",
+            halign="center",
+            size_hint_y=None,
+            height=dp(30),
+            font_style="Title",
+            role="medium"
+        )
+        graph_container.add_widget(graph_title)
+
+        # Add the graph
+        graph_container.add_widget(graph)
+
+        # Create a container for date labels
+        date_labels_container = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(30),
+            padding=("0dp", "0dp", "0dp", "0dp")
+        )
+
+        # Format dates for display
+        formatted_dates = [self.format_date_for_display(date) for date in dates]
+
+        # Select which dates to display based on total number
+        displayed_dates = []
+        if len(formatted_dates) <= 5:
+            # If 5 or fewer dates, show all
+            displayed_dates = formatted_dates
+        else:
+            # Show first, last, and some in between
+            step = max(1, len(formatted_dates) // 5)
+            indices = list(range(0, len(formatted_dates), step))
+            if len(formatted_dates) - 1 not in indices:
+                indices.append(len(formatted_dates) - 1)  # Always add the last index
+
+            # Create a list of empty strings with the correct length
+            displayed_dates = [""] * len(formatted_dates)
+
+            # Fill in only the selected indices
+            for idx in indices:
+                displayed_dates[idx] = formatted_dates[idx]
+
+        # Add date labels
+        for date_text in displayed_dates:
+            date_label = MDLabel(
+                text=date_text,
+                halign="center",
+                size_hint_x=1.0 / len(displayed_dates),
+                font_style="Body",
+                role="small"
+            )
+            date_labels_container.add_widget(date_label)
+
+        # Add date labels container
+        graph_container.add_widget(date_labels_container)
+
+        # Add the graph container to the layout
+        self.ids.weight_graph_container.add_widget(graph_container)
+
+        # Save references for later updates
+        self.graph = graph
+        self.plot = plot
 
     def load_assessments(self):
         """Load and display assessments."""

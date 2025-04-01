@@ -237,25 +237,31 @@ class AnimalDetailScreen(MDScreen):
             return
 
         self.ids.target_container.clear_widgets()
-        self.ids.target_container.height = self.ids.target_container.minimum_height
 
         # Create target weight header
         target_header = MDBoxLayout(
             orientation="horizontal",
             adaptive_height=True,
-            padding=(dp(8), dp(16), dp(8), dp(8)),
-            spacing="8dp"
+            padding=[dp(0), dp(48), dp(0), dp(8)],  # Reduced padding
+            spacing=dp(8),
+            size_hint_y=None,
+            height=dp(52)  # Fixed height for the header
         )
 
         header_label = MDLabel(
             text="Weight Target",
             font_style="Title",
+            padding=[dp(0), dp(24), dp(0), dp(8)],
             role="medium",
-            size_hint_x=0.7
+            size_hint_x=0.7,
+            size_hint_y=None,
+            height=dp(40)
         )
 
         set_target_btn = MDButton(
             style="elevated",
+            size_hint_y=0.7,
+            height=dp(40),
             on_release=lambda x: self.show_target_dialog()
         )
         set_target_btn.add_widget(MDButtonText(text="Set Target"))
@@ -267,14 +273,13 @@ class AnimalDetailScreen(MDScreen):
 
         # If we have a target weight, display it
         if self.target_weight and self.target_date:
-
             target_info = MDBoxLayout(
                 orientation="vertical",
-                padding=(dp(16), dp(8), dp(16), dp(16)),
-                spacing="4dp",
-                size_hint_y=None
+                padding=[dp(0), dp(8), dp(0), dp(8)],  # Adjusted padding
+                spacing=dp(4),
+                size_hint_y=None,
+                height=dp(120)  # Fixed height to ensure visibility
             )
-            target_info.height = target_info.minimum_height
 
             target_info.add_widget(MDLabel(
                 text=f"Target Weight: {self.target_weight} kg",
@@ -317,21 +322,27 @@ class AnimalDetailScreen(MDScreen):
                     else:
                         progress_text = "Progress: Already at target"
 
-                    target_info.add_widget(MDLabel(
+                    progress_label = MDLabel(
                         text=progress_text,
                         font_style="Body",
-                        role="medium"
-                    ))
+                        role="medium",
+                        size_hint_y=None,
+                        height=dp(24)
+                    )
+                    target_info.add_widget(progress_label)
 
                     # Add remaining calculation
                     remaining = self.target_weight - current_weight
-                    target_info.add_widget(MDLabel(
+                    remaining_label = MDLabel(
                         text=f"Remaining: {remaining:+.2f} kg",
                         font_style="Body",
                         role="medium",
                         theme_text_color="Custom",
-                        text_color=get_color_from_hex("#4CAF50") if remaining > 0 else get_color_from_hex("#F44336")
-                    ))
+                        text_color=get_color_from_hex("#4CAF50") if remaining > 0 else get_color_from_hex("#F44336"),
+                        size_hint_y=None,
+                        height=dp(24)
+                    )
+                    target_info.add_widget(remaining_label)
 
             self.ids.target_container.add_widget(target_info)
         else:
@@ -341,7 +352,8 @@ class AnimalDetailScreen(MDScreen):
                 font_style="Body",
                 role="medium",
                 halign="center",
-                padding=(dp(0), dp(16), dp(0), dp(16))
+                size_hint_y=None,
+                height=dp(40)  # Fixed height for visibility
             ))
 
     def format_date_for_display(self, date_str):

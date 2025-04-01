@@ -1,3 +1,6 @@
+# Fix for animal_detail.kv
+
+# 1. Update the target_container in animal_detail.kv:
 <AnimalDetailScreen@MDScreen>:
     md_bg_color: self.theme_cls.backgroundColor
 
@@ -89,16 +92,20 @@
                             text: "Initial weight: Unknown"
                             adaptive_height: True
 
-                # Weight target card
+                # Weight target card - FIXED
                 MDCard:
-                    id: target_container
                     orientation: "vertical"
-                    padding: dp(16)
+                    padding: [dp(16), dp(16), dp(16), dp(16)]
                     spacing: dp(12)
                     size_hint_y: None
-                    height: self.minimum_height
+                    height: dp(190)  # Fixed height to ensure all content is visible
 
-
+                    MDBoxLayout:
+                        id: target_container
+                        orientation: "vertical"
+                        spacing: dp(8)
+                        size_hint_y: None
+                        height: dp(140)  # Fixed height to accommodate all content including "Remaining" text
 
                 # Weight history card
                 MDCard:

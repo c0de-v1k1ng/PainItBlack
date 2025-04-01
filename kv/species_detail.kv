@@ -1,5 +1,5 @@
 <SpeciesDetailScreen@MDScreen>:
-    md_bg_color: self.theme_cls.backgroundColor  # ✅ Fix
+    md_bg_color: self.theme_cls.backgroundColor
 
     MDBoxLayout:
         orientation: "vertical"
@@ -16,44 +16,111 @@
                 text: "Species Details"
                 pos_hint: {"center_x": .5}
 
-        MDLabel:
-            id: species_title
-            text: "Species Name"
-            font_style: "Display"
-            role: "medium"
-            halign: "center"
-
         ScrollView:
             MDBoxLayout:
                 orientation: "vertical"
-                padding: dp(10)
-                spacing: dp(10)
+                padding: dp(16)
+                spacing: dp(16)
                 size_hint_y: None
                 height: self.minimum_height
 
-                MDLabel:
-                    text: "Assessment Scales"
-                    font_style: "Display"
-                    role: "small"
-                    halign: "left"
+                # Species info section - top 1/3 of the screen
+                MDBoxLayout:
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: dp(200)  # Limit to approximately 1/3 of usable area
+                    padding: [0, 0, 0, dp(8)]
+                    spacing: dp(8)
 
-                MDList:
-                    id: assessment_list
+                    # Species name
+                    MDLabel:
+                        id: species_title
+                        text: "Species Name"
+                        font_style: "Display"
+                        role: "large"  # Changed to larger size
+                        halign: "center"
+                        size_hint_y: None
+                        height: dp(48)
 
-                MDLabel:
-                    text: "Manuals"
-                    font_style: "Display"
-                    role: "small"
-                    halign: "left"
+                    # Species image
+                    FitImage:
+                        id: species_image
+                        source: "assets/images/animal_placeholder.png"  # Default placeholder
+                        size_hint_y: None
+                        height: dp(140)
+                        fit_mode: "contain"
 
-                MDList:
-                    id: manual_list
+                # Assessment Scales section
+                MDBoxLayout:
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(16)  # Increased spacing between title and list
+                    padding: [dp(8), dp(8), dp(8), dp(16)]  # Added padding all around
 
-                MDLabel:
-                    text: "Training Videos"
-                    font_style: "Display"
-                    role: "small"
-                    halign: "left"
+                    MDLabel:
+                        text: "Assessment Scales"
+                        font_style: "Title"
+                        role: "medium"  # Slightly larger
+                        halign: "center"  # Center align section title
+                        size_hint_y: None
+                        height: dp(36)
 
-                MDList:
-                    id: video_list
+                    # List container with zero internal padding
+                    MDBoxLayout:
+                        id: assessment_list
+                        orientation: "vertical"
+                        spacing: dp(12)  # Space between cards
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [0, 0, 0, 0]  # No padding to avoid double padding
+
+                # Manuals section
+                MDBoxLayout:
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(16)  # Increased spacing between title and list
+                    padding: [dp(8), dp(8), dp(8), dp(16)]  # Added padding all around
+
+                    MDLabel:
+                        text: "Manuals"
+                        font_style: "Title"
+                        role: "medium"  # Slightly larger
+                        halign: "center"  # Center align section title
+                        size_hint_y: None
+                        height: dp(36)
+
+                    # List container with zero internal padding
+                    MDBoxLayout:
+                        id: manual_list
+                        orientation: "vertical"
+                        spacing: dp(12)  # Space between cards
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [0, 0, 0, 0]  # No padding to avoid double padding
+
+                # Videos section
+                MDBoxLayout:
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(16)  # Increased spacing between title and list
+                    padding: [dp(8), dp(8), dp(8), dp(16)]  # Added padding all around
+
+                    MDLabel:
+                        text: "Training Videos"
+                        font_style: "Title"
+                        role: "medium"  # Slightly larger
+                        halign: "center"  # Center align section title
+                        size_hint_y: None
+                        height: dp(36)
+
+                    # List container with zero internal padding
+                    MDBoxLayout:
+                        id: video_list
+                        orientation: "vertical"
+                        spacing: dp(12)  # Space between cards
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [0, 0, 0, 0]  # No padding to avoid double padding

@@ -43,7 +43,7 @@
                     FitImage:
                         id: animal_image
                         size_hint: None, None
-                        size: dp(120), dp(120)
+                        size: dp(256), dp(256)
                         radius: dp(8)
                         fit_mode: "contain"
 
@@ -92,7 +92,7 @@
                             text: "Initial weight: Unknown"
                             adaptive_height: True
 
-                # Weight target card - FIXED
+                # Weight target card in animal_detail.kv with improved vertical alignment
                 MDCard:
                     orientation: "vertical"
                     padding: [dp(16), dp(16), dp(16), dp(16)]
@@ -100,12 +100,40 @@
                     size_hint_y: None
                     height: dp(190)  # Fixed height to ensure all content is visible
 
+                    # Header with title and button - fixed vertical alignment
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(48)  # Increased height
+                        spacing: dp(8)
+                        padding: [0, dp(8), 0, dp(8)]  # Added vertical padding
+                        pos_hint: {"center_y": 0.5}  # Center the content vertically
+
+                        MDLabel:
+                            text: "Weight Target"
+                            font_style: "Title"
+                            role: "medium"
+                            size_hint_x: 0.7
+                            pos_hint: {"center_y": 0.5}  # Center label vertically
+
+                        MDButton:
+                            style: "elevated"
+                            size_hint_x: 0.3
+                            size_hint_y: None
+                            height: dp(36)  # Explicit height
+                            pos_hint: {"center_y": 0.5}  # Center button vertically
+                            on_release: root.show_target_dialog()
+
+                            MDButtonText:
+                                text: "Set Target"
+
+                    # Target container for dynamic content
                     MDBoxLayout:
                         id: target_container
                         orientation: "vertical"
                         spacing: dp(8)
                         size_hint_y: None
-                        height: dp(140)  # Fixed height to accommodate all content including "Remaining" text
+                        height: dp(132)  # Adjusted to account for the taller header
 
                 # Weight history card
                 MDCard:

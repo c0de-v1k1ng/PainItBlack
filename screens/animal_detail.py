@@ -236,52 +236,13 @@ class AnimalDetailScreen(MDScreen):
         if not hasattr(self.ids, 'target_container'):
             return
 
+        # Clear the existing content in the container
         self.ids.target_container.clear_widgets()
-
-        # Create target weight header
-        target_header = MDBoxLayout(
-            orientation="horizontal",
-            adaptive_height=True,
-            padding=[dp(0), dp(48), dp(0), dp(8)],  # Reduced padding
-            spacing=dp(8),
-            size_hint_y=None,
-            height=dp(52)  # Fixed height for the header
-        )
-
-        header_label = MDLabel(
-            text="Weight Target",
-            font_style="Title",
-            padding=[dp(0), dp(24), dp(0), dp(8)],
-            role="medium",
-            size_hint_x=0.7,
-            size_hint_y=None,
-            height=dp(40)
-        )
-
-        set_target_btn = MDButton(
-            style="elevated",
-            size_hint_y=0.7,
-            height=dp(40),
-            on_release=lambda x: self.show_target_dialog()
-        )
-        set_target_btn.add_widget(MDButtonText(text="Set Target"))
-
-        target_header.add_widget(header_label)
-        target_header.add_widget(set_target_btn)
-
-        self.ids.target_container.add_widget(target_header)
 
         # If we have a target weight, display it
         if self.target_weight and self.target_date:
-            target_info = MDBoxLayout(
-                orientation="vertical",
-                padding=[dp(0), dp(8), dp(0), dp(8)],  # Adjusted padding
-                spacing=dp(4),
-                size_hint_y=None,
-                height=dp(120)  # Fixed height to ensure visibility
-            )
-
-            target_info.add_widget(MDLabel(
+            # Add target weight and date info
+            self.ids.target_container.add_widget(MDLabel(
                 text=f"Target Weight: {self.target_weight} kg",
                 font_style="Body",
                 role="medium",
@@ -289,7 +250,7 @@ class AnimalDetailScreen(MDScreen):
                 height=dp(24)
             ))
 
-            target_info.add_widget(MDLabel(
+            self.ids.target_container.add_widget(MDLabel(
                 text=f"Target Date: {self.target_date}",
                 font_style="Body",
                 role="medium",
@@ -329,7 +290,7 @@ class AnimalDetailScreen(MDScreen):
                         size_hint_y=None,
                         height=dp(24)
                     )
-                    target_info.add_widget(progress_label)
+                    self.ids.target_container.add_widget(progress_label)
 
                     # Add remaining calculation
                     remaining = self.target_weight - current_weight
@@ -342,9 +303,7 @@ class AnimalDetailScreen(MDScreen):
                         size_hint_y=None,
                         height=dp(24)
                     )
-                    target_info.add_widget(remaining_label)
-
-            self.ids.target_container.add_widget(target_info)
+                    self.ids.target_container.add_widget(remaining_label)
         else:
             # No target set
             self.ids.target_container.add_widget(MDLabel(
@@ -862,3 +821,38 @@ class AnimalDetailScreen(MDScreen):
         except ValueError:
             self.show_error_dialog("Please enter a valid weight.")
 
+    def delete_weight(self, weight_id):
+        """Delete a weight record from the database."""
+        # Show confirmation dialog
+        self.dialog = MDDialog(
+            MDDialogHeadlineText(text="Confirm Deletion"),
+            MDDialogContentContainer(
+                MDLabel(text="Are you sure you want to delete this weight record?")
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Cancel"),
+                    style="text",
+                    on_release=lambda x: self.dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(text="Delete"),
+                    style="elevated",
+                    on_release=lambda x: self.perform_weight_delete(weight_id)
+                ),
+                spacing="8dp"
+            ),
+            auto_dismiss=False
+        )
+        self.dialog.open()
+
+    def perform_weight_delete(self, weight_id):
+        """Actually delete the weight record after confirmation."""
+        success = database.delete_weight_record(weight_id)
+        self.dialog.dismiss()
+
+        if success:
+            self.load_weight_history()
+            self.show_success_dialog("Weight record deleted successfully.")
+        else:
+            self.show_error_dialog("Failed to delete weight record.")

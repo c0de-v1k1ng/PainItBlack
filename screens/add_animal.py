@@ -1,7 +1,9 @@
+from datetime import datetime
 from functools import partial
 
 from kivy.uix.screenmanager import Screen
 from kivymd.material_resources import dp
+from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.pickers import MDDockedDatePicker, MDModalDatePicker
@@ -94,7 +96,39 @@ class AddAnimalScreen(MDScreen):
             instance.dismiss()
 
     def show_file_chooser(self):
+        """Show options to choose photo - camera or file."""
+        self.dialog = MDDialog(
+            MDDialogHeadlineText(text="Choose Photo Method"),
+            MDDialogContentContainer(
+                MDLabel(text="How would you like to add a photo?")
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="File"),
+                    style="text",
+                    on_release=lambda x: self.show_file_chooser_dialog()
+                ),
+                MDButton(
+                    MDButtonText(text="Camera"),
+                    style="text",
+                    on_release=lambda x: self.capture_image()
+                ),
+                MDButton(
+                    MDButtonText(text="Cancel"),
+                    style="text",
+                    on_release=lambda x: self.dialog.dismiss()
+                ),
+                spacing="8dp"
+            ),
+            auto_dismiss=True
+        )
+        self.dialog.open()
+
+    def show_file_chooser_dialog(self):
         """Show dialog with file chooser to select an image."""
+        if self.dialog:
+            self.dialog.dismiss()
+
         user_pictures = os.path.expanduser("~/Pictures")
 
         self.filechooser_view = FileChooserListView(
@@ -126,14 +160,95 @@ class AddAnimalScreen(MDScreen):
         )
         self.file_dialog.open()
 
-    def select_image(self):
-        """Handle image selection."""
-        selection = self.filechooser_view.selection
-        if selection:
-            self.selected_image_path = selection[0]
-            # Update photo preview directly instead of using photo_label
-            self.ids.photo_preview.source = self.selected_image_path
-        self.file_dialog.dismiss()
+    def capture_image(self):
+        """Capture an image using the camera."""
+        if self.dialog:
+            self.dialog.dismiss()
+
+        try:
+            from kivy.uix.camera import Camera
+            from kivy.clock import Clock
+
+            # Create camera view
+            self.camera_layout = MDBoxLayout(
+                orientation="vertical",
+                size_hint=(1, None),
+                height=dp(500)
+            )
+
+            # Add camera widget
+            self.camera = Camera(
+                resolution=(640, 480),
+                size_hint=(1, None),
+                height=dp(400),
+                play=True
+            )
+            self.camera_layout.add_widget(self.camera)
+
+            # Add buttons
+            button_layout = MDBoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height=dp(50),
+                spacing=dp(10),
+                padding=dp(10)
+            )
+
+            capture_btn = MDButton(
+                style="elevated",
+                on_release=lambda x: self.take_picture()
+            )
+            capture_btn.add_widget(MDButtonText(text="Capture"))
+
+            cancel_btn = MDButton(
+                style="text",
+                on_release=lambda x: self.cancel_camera()
+            )
+            cancel_btn.add_widget(MDButtonText(text="Cancel"))
+
+            button_layout.add_widget(capture_btn)
+            button_layout.add_widget(cancel_btn)
+            self.camera_layout.add_widget(button_layout)
+
+            # Create dialog
+            self.camera_dialog = MDDialog(
+                MDDialogHeadlineText(text="Take Photo"),
+                MDDialogContentContainer(
+                    self.camera_layout
+                ),
+                auto_dismiss=False
+            )
+            self.camera_dialog.open()
+
+        except Exception as e:
+            # Camera might not be available on all devices
+            self.show_error_dialog(f"Camera error: {str(e)}")
+            # Fall back to file chooser
+            self.show_file_chooser_dialog()
+
+    def take_picture(self):
+        """Take a picture with the camera."""
+        # Create directory if it doesn't exist
+        if not os.path.exists('animal_images'):
+            os.makedirs('animal_images')
+
+        # Generate a unique filename
+        filename = f"animal_images/camera_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+
+        # Take the picture
+        self.camera.export_to_png(filename)
+
+        # Update with the new image
+        self.selected_image_path = filename
+        self.ids.photo_preview.source = filename
+
+        # Close the camera
+        self.camera_dialog.dismiss()
+
+    def cancel_camera(self):
+        """Cancel camera capture."""
+        if hasattr(self, 'camera_dialog') and self.camera_dialog:
+            self.camera_dialog.dismiss()
 
     def save_animal(self):
         """Save new animal entry to the database."""

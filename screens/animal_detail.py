@@ -1,26 +1,21 @@
 import json
-
-from kivy.graphics import Color, Ellipse
-from kivy.uix.screenmanager import Screen
-from kivymd.app import MDApp
-from kivymd.uix.card import MDCard
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDButton, MDButtonText, MDIconButton
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
-from kivymd.uix.fitimage import FitImage
-from kivymd.uix.textfield import MDTextField
-from kivy_garden.graph import Graph, MeshLinePlot
-from kivy.metrics import dp
-from kivy.utils import get_color_from_hex
-from kivy.properties import ObjectProperty, NumericProperty, StringProperty
-
-import database
 import os
 from datetime import datetime
 
-from screens.assessments import AssessmentsScreen
+from kivy.graphics import Color, Ellipse
+from kivy.metrics import dp
+from kivy.properties import NumericProperty, StringProperty
+from kivy.utils import get_color_from_hex
+from kivy_garden.graph import Graph, MeshLinePlot
+from kivymd.app import MDApp
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDButton, MDButtonText, MDIconButton
+from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
+from kivymd.uix.label import MDLabel
+from kivymd.uix.screen import MDScreen
+from kivymd.uix.textfield import MDTextField
+
+import database
 
 
 class AnimalDetailScreen(MDScreen):
@@ -55,19 +50,17 @@ class AnimalDetailScreen(MDScreen):
 
     def load_animal_data(self):
         """Load animal details from the database."""
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-
-        # Get animal details
-        cursor.execute("""
+        # Get animal details using the new execute_query function
+        animal = database.execute_query(
+            """
             SELECT name, species, breed, birthday, sex, castrated, current_weight, image_path, 
                    target_weight, target_date
             FROM animals WHERE id = ?
-        """, (self.animal_id,))
-
-        animal = cursor.fetchone()
+            """,
+            (self.animal_id,),
+            fetch_mode='one'
+        )
         if not animal:
-            conn.close()
             return
 
         # Update the UI with animal details
@@ -104,7 +97,7 @@ class AnimalDetailScreen(MDScreen):
         # Load assessments
         self.load_assessments()
 
-        conn.close()
+        return
 
     def load_weight_history(self):
         """Load and display weight history."""
@@ -113,16 +106,15 @@ class AnimalDetailScreen(MDScreen):
         # Clear any existing weight data
         self.weight_data = []
 
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("""
+        # Get weight history using the new execute_query function
+        weights = database.execute_query(
+            """
             SELECT id, date, weight FROM weight_history
             WHERE animal_id = ? ORDER BY date ASC
-        """, (self.animal_id,))
-
-        weights = cursor.fetchall()
-        conn.close()
+            """,
+            (self.animal_id,),
+            fetch_mode='all'
+        )
 
         if not weights:
             self.ids.weight_history_container.add_widget(
@@ -585,14 +577,14 @@ class AnimalDetailScreen(MDScreen):
                 return
 
             # Update animal record with target weight and date
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute(
+            success = database.execute_query(
                 "UPDATE animals SET target_weight = ?, target_date = ? WHERE id = ?",
                 (target_weight, date_text, self.animal_id)
             )
-            conn.commit()
-            conn.close()
+
+            if not success:
+                self.show_error_dialog("Failed to update target weight. Please try again.")
+                return
 
             # Update local properties
             self.target_weight = target_weight
@@ -609,14 +601,14 @@ class AnimalDetailScreen(MDScreen):
     def clear_target(self):
         """Clear the weight target."""
         # Update animal record to clear target weight and date
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
+        success = database.execute_query(
             "UPDATE animals SET target_weight = NULL, target_date = NULL WHERE id = ?",
             (self.animal_id,)
         )
-        conn.commit()
-        conn.close()
+
+        if not success:
+            self.show_error_dialog("Failed to clear target weight. Please try again.")
+            return
 
         # Update local properties
         self.target_weight = None
@@ -635,16 +627,16 @@ class AnimalDetailScreen(MDScreen):
 
         self.ids.assessments_container.clear_widgets()
 
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("""
+        # Get assessments using the new execute_query function
+        assessments = database.execute_query(
+            """
             SELECT id, date, scale_used, result FROM assessments
             WHERE animal_id = ? ORDER BY date DESC
-        """, (self.animal_id,))
+            """,
+            (self.animal_id,),
+            fetch_mode='all'
+        )
 
-        assessments = cursor.fetchall()
-        conn.close()
 
         if not assessments:
             empty_label = MDLabel(

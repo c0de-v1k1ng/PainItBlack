@@ -1,8 +1,7 @@
 from functools import partial
 
-from kivy.uix.screenmanager import Screen
-from kivymd.uix.card import MDCard
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.card import MDCard
 from kivymd.uix.fitimage import FitImage
 from kivymd.uix.label import MDLabel
 from kivymd.uix.screen import MDScreen

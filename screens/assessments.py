@@ -1,19 +1,20 @@
-from kivy.uix.screenmanager import Screen
 from kivy.uix.scrollview import ScrollView
-from kivy.utils import get_color_from_hex
-from kivymd.uix.card import MDCard
-from kivymd.uix.label import MDLabel
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.list import MDList, MDListItem, MDListItemHeadlineText, MDListItemSupportingText
-from kivymd.uix.button import MDButton, MDButtonText
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
-from kivymd.uix.textfield import MDTextField
-from kivymd.uix.menu import MDDropdownMenu
+import json
 from datetime import datetime
 from functools import partial
+
 from kivy.metrics import dp
-import json
+from kivy.uix.scrollview import ScrollView
+from kivy.utils import get_color_from_hex
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.card import MDCard
+from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
+from kivymd.uix.label import MDLabel
+from kivymd.uix.list import MDListItem, MDListItemHeadlineText, MDListItemSupportingText
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.screen import MDScreen
+from kivymd.uix.textfield import MDTextField
 
 import database
 from assessment_scales import ASSESSMENT_SCALES
@@ -48,19 +49,15 @@ class AssessmentsScreen(MDScreen):
         """Load all assessments into the list."""
         self.ids.assessments_list.clear_widgets()
 
-        # Get all assessments with animal names
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("""
+        assessments = database.execute_query(
+            """
             SELECT a.id, a.date, a.scale_used, a.result, n.name, n.species, a.animal_id
             FROM assessments a
             JOIN animals n ON a.animal_id = n.id
             ORDER BY a.date DESC
-        """)
-
-        assessments = cursor.fetchall()
-        conn.close()
+            """,
+            fetch_mode='all'
+        )
 
         if not assessments:
             # Show empty state
@@ -107,13 +104,11 @@ class AssessmentsScreen(MDScreen):
 
     def show_new_assessment_dialog(self, animal_id=None):
         """Show dialog to create a new assessment, optionally preselecting an animal."""
-
         # Get a list of all animals
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, species FROM animals ORDER BY name")
-        animals = cursor.fetchall()
-        conn.close()
+        animals = database.execute_query(
+            "SELECT id, name, species FROM animals ORDER BY name",
+            fetch_mode='all'
+        )
 
         if not animals:
             self.dialog = MDDialog(
@@ -182,12 +177,11 @@ class AssessmentsScreen(MDScreen):
         if not focus:
             return
 
-        # Get animals from database
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, species FROM animals ORDER BY name")
-        animals = cursor.fetchall()
-        conn.close()
+        # Get animals from database using the new execute_query function
+        animals = database.execute_query(
+            "SELECT id, name, species FROM animals ORDER BY name",
+            fetch_mode='all'
+        )
 
         menu_items = []
         for animal in animals:
@@ -337,18 +331,10 @@ class AssessmentsScreen(MDScreen):
 
     def show_assessment_details(self, assessment_id, animal_id):
         """Show details of an assessment."""
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT a.date, a.scale_used, a.result, n.name, n.species
-            FROM assessments a
-            JOIN animals n ON a.animal_id = n.id
-            WHERE a.id = ?
-        """, (assessment_id,))
-
-        assessment = cursor.fetchone()
-        conn.close()
+        assessment = database.execute_query(
+            "SELECT a.date, a.scale_used, a.result, n.name, n.species FROM assessments a JOIN animals n ON a.animal_id = n.id WHERE a.id = ?",
+            fetch_mode='all')
 
         if not assessment:
             return

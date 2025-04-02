@@ -1,20 +1,19 @@
+import os
+import shutil
 from datetime import datetime
 from functools import partial
 
-from kivy.uix.screenmanager import Screen
+from kivy.uix.filechooser import FileChooserListView
 from kivymd.material_resources import dp
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.dialog import MDDialog, MDDialogButtonContainer, MDDialogHeadlineText, MDDialogContentContainer
 from kivymd.uix.label import MDLabel
 from kivymd.uix.menu import MDDropdownMenu
-from kivymd.uix.pickers import MDDockedDatePicker, MDModalDatePicker
-from kivymd.uix.dialog import MDDialog, MDDialogButtonContainer, MDDialogHeadlineText, MDDialogContentContainer
-from kivymd.uix.button import MDButton, MDButtonText
-from kivy.uix.filechooser import FileChooserListView
+from kivymd.uix.pickers import MDModalDatePicker
 from kivymd.uix.screen import MDScreen
 
 import database
-import os
-import shutil
 
 
 class EditAnimalScreen(MDScreen):
@@ -50,15 +49,17 @@ class EditAnimalScreen(MDScreen):
             self.load_animal_data()
 
     def load_animal_data(self):
-        """Load existing animal data into the form."""
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT name, species, breed, birthday, sex, castrated, current_weight, image_path FROM animals WHERE id = ?",
-            (self.animal_id,)
+        """Load animal details from the database."""
+        # Get animal details using the new execute_query function
+        animal = database.execute_query(
+            """
+            SELECT name, species, breed, birthday, sex, castrated, current_weight, image_path, 
+                   target_weight, target_date
+            FROM animals WHERE id = ?
+            """,
+            (self.animal_id,),
+            fetch_mode='one'
         )
-        animal = cursor.fetchone()
-        conn.close()
 
         if not animal:
             # Animal not found, show error and go back

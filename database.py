@@ -1,315 +1,362 @@
 import sqlite3
 import os
+import logging
 from datetime import datetime
+from contextlib import contextmanager
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.FileHandler("database.log"), logging.StreamHandler()]
+)
+logger = logging.getLogger("database")
 
 DB_NAME = "animals.db"
 
 
+@contextmanager
 def get_db_connection():
-    """Get a connection to the SQLite database."""
-    return sqlite3.connect(DB_NAME)
+    """Context manager for database connections to ensure proper closing."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        # Enable foreign key support
+        conn.execute("PRAGMA foreign_keys = ON")
+        yield conn
+    except sqlite3.Error as e:
+        logger.error(f"Database connection error: {e}")
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if conn:
+            conn.close()
+
+
+def execute_query(query, params=(), fetch_mode=None):
+    """
+    Execute a database query with proper connection handling and error management.
+
+    Args:
+        query (str): SQL query to execute
+        params (tuple): Parameters for the query
+        fetch_mode (str): 'one', 'all', or None for no fetch (for INSERT/UPDATE)
+
+    Returns:
+        The query result based on fetch_mode, or True/False for success on non-fetch operations
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+
+            if fetch_mode == 'one':
+                return cursor.fetchone()
+            elif fetch_mode == 'all':
+                return cursor.fetchall()
+            else:
+                conn.commit()
+                if cursor.lastrowid:
+                    return cursor.lastrowid
+                return True
+    except sqlite3.Error as e:
+        logger.error(f"Query execution error: {e}\nQuery: {query}\nParams: {params}")
+        return None if fetch_mode else False
 
 
 def create_tables():
     """Create the database tables if they don't exist."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS animals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            species TEXT NOT NULL,
-            breed TEXT,
-            birthday TEXT,
-            sex TEXT CHECK(sex IN ('Male', 'Female')),
-            castrated TEXT CHECK(castrated IN ('Yes','No')),
-            current_weight REAL,
-            image_path TEXT,
-            target_weight REAL,
-            target_date TEXT
-        )
-    ''')
+            # Animals table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS animals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    species TEXT NOT NULL,
+                    breed TEXT,
+                    birthday TEXT,
+                    sex TEXT CHECK(sex IN ('Male', 'Female')),
+                    castrated TEXT CHECK(castrated IN ('Yes','No')),
+                    current_weight REAL,
+                    image_path TEXT,
+                    target_weight REAL,
+                    target_date TEXT
+                )
+            ''')
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS weight_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            animal_id INTEGER,
-            date TEXT NOT NULL,
-            weight REAL NOT NULL,
-            FOREIGN KEY (animal_id) REFERENCES animals(id)
-        )
-    ''')
+            # Weight history table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS weight_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    animal_id INTEGER,
+                    date TEXT NOT NULL,
+                    weight REAL NOT NULL,
+                    FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE
+                )
+            ''')
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS assessments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            animal_id INTEGER,
-            date TEXT NOT NULL,
-            scale_used TEXT NOT NULL,
-            result TEXT NOT NULL,
-            FOREIGN KEY (animal_id) REFERENCES animals(id)
-        )
-    ''')
+            # Assessments table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS assessments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    animal_id INTEGER,
+                    date TEXT NOT NULL,
+                    scale_used TEXT NOT NULL,
+                    result TEXT NOT NULL,
+                    FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE
+                )
+            ''')
 
-    # Check if we need to update the schema to add target_weight and target_date
-    cursor.execute("PRAGMA table_info(animals)")
-    columns = [col[1] for col in cursor.fetchall()]
+            # Check for schema updates needed
+            cursor.execute("PRAGMA table_info(animals)")
+            columns = [col[1] for col in cursor.fetchall()]
 
-    if 'target_weight' not in columns:
-        cursor.execute('ALTER TABLE animals ADD COLUMN target_weight REAL')
-        print("Added target_weight column to animals table")
+            if 'target_weight' not in columns:
+                cursor.execute('ALTER TABLE animals ADD COLUMN target_weight REAL')
+                logger.info("Added target_weight column to animals table")
 
-    if 'target_date' not in columns:
-        cursor.execute('ALTER TABLE animals ADD COLUMN target_date TEXT')
-        print("Added target_date column to animals table")
+            if 'target_date' not in columns:
+                cursor.execute('ALTER TABLE animals ADD COLUMN target_date TEXT')
+                logger.info("Added target_date column to animals table")
 
-    conn.commit()
-    conn.close()
+            conn.commit()
+            logger.info("Database tables created or verified successfully")
+            return True
+    except sqlite3.Error as e:
+        logger.error(f"Error creating tables: {e}")
+        return False
 
 
 # Animal CRUD Operations
 def add_animal(name, species, breed, birthday, sex, castrated, weight, image_path):
     """Add a new animal to the database."""
-    conn = None
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO animals (name, species, breed, birthday, sex, castrated, current_weight, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (name, species, breed, birthday, sex, castrated, weight, image_path)
-        )
-        animal_id = cursor.lastrowid
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Start a transaction
+            cursor.execute('BEGIN')
 
-        # Add initial weight record to history
-        today = datetime.now().strftime("%Y-%m-%d")
+            # Insert the animal
+            cursor.execute(
+                "INSERT INTO animals (name, species, breed, birthday, sex, castrated, current_weight, image_path) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (name, species, breed, birthday, sex, castrated, weight, image_path)
+            )
+            animal_id = cursor.lastrowid
 
-        # Add weight record using the same connection
-        cursor.execute(
-            "INSERT INTO weight_history (animal_id, date, weight) VALUES (?, ?, ?)",
-            (animal_id, today, weight)
-        )
+            # Add initial weight record
+            today = datetime.now().strftime("%Y-%m-%d")
+            cursor.execute(
+                "INSERT INTO weight_history (animal_id, date, weight) VALUES (?, ?, ?)",
+                (animal_id, today, weight)
+            )
 
-        conn.commit()
-        return animal_id
+            # Commit the transaction
+            conn.commit()
+            logger.info(f"Added animal {name} (ID: {animal_id}) successfully")
+            return animal_id
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        if conn:
-            conn.rollback()  # Rollback any changes if error occurs
+        logger.error(f"Error adding animal {name}: {e}")
         return None
-    finally:
-        if conn:
-            conn.close()  # Ensure connection is closed even if an exception occurs
 
 
 def get_animal(animal_id):
     """Get animal details by ID."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT * FROM animals WHERE id = ?",
-            (animal_id,)
-        )
-        animal = cursor.fetchone()
-        conn.close()
-        return animal
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return None
+    return execute_query(
+        "SELECT * FROM animals WHERE id = ?",
+        (animal_id,),
+        fetch_mode='one'
+    )
 
 
 def update_animal(animal_id, name, species, breed, birthday, sex, castrated, weight, image_path):
     """Update an existing animal's information."""
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Start a transaction
+            cursor.execute('BEGIN')
 
-        # Get current weight to check if it changed
-        cursor.execute("SELECT current_weight FROM animals WHERE id = ?", (animal_id,))
-        current_weight = cursor.fetchone()[0]
+            # Get current weight
+            cursor.execute("SELECT current_weight FROM animals WHERE id = ?", (animal_id,))
+            result = cursor.fetchone()
+            if not result:
+                logger.warning(f"Animal ID {animal_id} not found for update")
+                return False
 
-        cursor.execute(
-            """UPDATE animals SET 
-               name = ?, species = ?, breed = ?, birthday = ?, 
-               sex = ?, castrated = ?, current_weight = ?, image_path = ?
-               WHERE id = ?""",
-            (name, species, breed, birthday, sex, castrated, weight, image_path, animal_id)
-        )
+            current_weight = result[0]
 
-        # If weight changed, add to history
-        if weight != current_weight:
-            today = datetime.now().strftime("%Y-%m-%d")
-            add_weight_record(animal_id, today, weight)
+            # Update animal record
+            cursor.execute(
+                """UPDATE animals SET 
+                   name = ?, species = ?, breed = ?, birthday = ?, 
+                   sex = ?, castrated = ?, current_weight = ?, image_path = ?
+                   WHERE id = ?""",
+                (name, species, breed, birthday, sex, castrated, weight, image_path, animal_id)
+            )
 
-        conn.commit()
-        conn.close()
-        return True
+            # Add weight history if changed
+            if weight != current_weight:
+                today = datetime.now().strftime("%Y-%m-%d")
+                cursor.execute(
+                    "INSERT INTO weight_history (animal_id, date, weight) VALUES (?, ?, ?)",
+                    (animal_id, today, weight)
+                )
+
+            # Commit the transaction
+            conn.commit()
+            logger.info(f"Updated animal ID {animal_id} successfully")
+            return True
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        logger.error(f"Error updating animal ID {animal_id}: {e}")
         return False
 
 
 def delete_animal(animal_id):
     """Delete an animal and its related records."""
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
         # Get image path to delete file
-        cursor.execute("SELECT image_path FROM animals WHERE id = ?", (animal_id,))
-        image_path = cursor.fetchone()[0]
+        image_path = execute_query(
+            "SELECT image_path FROM animals WHERE id = ?",
+            (animal_id,),
+            fetch_mode='one'
+        )
 
-        # Delete related records first (foreign key constraints)
-        cursor.execute("DELETE FROM weight_history WHERE animal_id = ?", (animal_id,))
-        cursor.execute("DELETE FROM assessments WHERE animal_id = ?", (animal_id,))
+        if not image_path:
+            logger.warning(f"Animal ID {animal_id} not found for deletion")
+            return False
 
-        # Delete the animal
-        cursor.execute("DELETE FROM animals WHERE id = ?", (animal_id,))
+        image_path = image_path[0]
 
-        conn.commit()
-        conn.close()
+        # Delete the animal (cascading delete will handle related records)
+        success = execute_query(
+            "DELETE FROM animals WHERE id = ?",
+            (animal_id,)
+        )
 
-        # Delete image file if it exists
-        if image_path and os.path.exists(image_path):
+        if success and image_path and os.path.exists(image_path):
             try:
                 os.remove(image_path)
+                logger.info(f"Deleted image file: {image_path}")
             except OSError as e:
-                print(f"Error deleting image file: {e}")
+                logger.error(f"Error deleting image file {image_path}: {e}")
 
-        return True
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        logger.info(f"Deleted animal ID {animal_id} successfully")
+        return success
+    except Exception as e:
+        logger.error(f"Error in delete_animal for ID {animal_id}: {e}")
         return False
 
 
 def get_all_animals():
     """Get a list of all animals."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, species FROM animals ORDER BY name")
-        animals = cursor.fetchall()
-        conn.close()
-        return animals
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return []
+    return execute_query(
+        "SELECT id, name, species FROM animals ORDER BY name",
+        fetch_mode='all'
+    ) or []
 
 
 def get_animals_by_species(species):
     """Get a list of animals filtered by species."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, name, breed FROM animals WHERE species = ? ORDER BY name",
-            (species,)
-        )
-        animals = cursor.fetchall()
-        conn.close()
-        return animals
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return []
+    return execute_query(
+        "SELECT id, name, breed FROM animals WHERE species = ? ORDER BY name",
+        (species,),
+        fetch_mode='all'
+    ) or []
 
 
 # Weight History Operations
 def add_weight_record(animal_id, date, weight):
     """Add a new weight record for an animal."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO weight_history (animal_id, date, weight) VALUES (?, ?, ?)",
-            (animal_id, date, weight)
+    success = execute_query(
+        "INSERT INTO weight_history (animal_id, date, weight) VALUES (?, ?, ?)",
+        (animal_id, date, weight)
+    )
+
+    if success:
+        # Update current weight in animals table
+        execute_query(
+            "UPDATE animals SET current_weight = ? WHERE id = ?",
+            (weight, animal_id)
         )
-        conn.commit()
-        conn.close()
-        return True
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return False
+        logger.info(f"Added weight record for animal ID {animal_id}: {weight}kg on {date}")
+
+    return bool(success)
 
 
 def get_weight_history(animal_id):
     """Get weight history for an animal."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT date, weight FROM weight_history WHERE animal_id = ? ORDER BY date",
-            (animal_id,)
-        )
-        weights = cursor.fetchall()
-        conn.close()
-        return weights
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return []
+    return execute_query(
+        "SELECT date, weight FROM weight_history WHERE animal_id = ? ORDER BY date",
+        (animal_id,),
+        fetch_mode='all'
+    ) or []
 
 
 def delete_weight_record(weight_id):
     """Delete a weight record by ID."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM weight_history WHERE id = ?", (weight_id,))
-        conn.commit()
-        conn.close()
-        return True
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return False
+    success = execute_query(
+        "DELETE FROM weight_history WHERE id = ?",
+        (weight_id,)
+    )
+
+    if success:
+        logger.info(f"Deleted weight record ID {weight_id}")
+
+    return success
 
 
 # Assessment Operations
 def add_assessment(animal_id, date, scale_used, result):
     """Add a new assessment for an animal."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO assessments (animal_id, date, scale_used, result) VALUES (?, ?, ?, ?)",
-            (animal_id, date, scale_used, result)
-        )
-        conn.commit()
-        conn.close()
-        return True
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return False
+    success = execute_query(
+        "INSERT INTO assessments (animal_id, date, scale_used, result) VALUES (?, ?, ?, ?)",
+        (animal_id, date, scale_used, result)
+    )
+
+    if success:
+        logger.info(f"Added assessment for animal ID {animal_id} using scale {scale_used} on {date}")
+
+    return success
 
 
 def get_assessments(animal_id):
     """Get assessment history for an animal."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, date, scale_used, result FROM assessments WHERE animal_id = ? ORDER BY date DESC",
-            (animal_id,)
-        )
-        assessments = cursor.fetchall()
-        conn.close()
-        return assessments
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return []
+    return execute_query(
+        "SELECT id, date, scale_used, result FROM assessments WHERE animal_id = ? ORDER BY date DESC",
+        (animal_id,),
+        fetch_mode='all'
+    ) or []
+
+
+def get_all_assessments():
+    """Get all assessments with animal information."""
+    return execute_query(
+        """
+        SELECT a.id, a.date, a.scale_used, a.result, n.id, n.name, n.species
+        FROM assessments a
+        JOIN animals n ON a.animal_id = n.id
+        ORDER BY a.date DESC
+        """,
+        fetch_mode='all'
+    ) or []
 
 
 def delete_assessment(assessment_id):
     """Delete an assessment by ID."""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM assessments WHERE id = ?", (assessment_id,))
-        conn.commit()
-        conn.close()
-        return True
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-        return False
+    success = execute_query(
+        "DELETE FROM assessments WHERE id = ?",
+        (assessment_id,)
+    )
+
+    if success:
+        logger.info(f"Deleted assessment ID {assessment_id}")
+
+    return success
 
 
 # Initialize database when module is imported

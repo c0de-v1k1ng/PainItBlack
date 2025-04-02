@@ -1,20 +1,18 @@
+import os
+import shutil
 from datetime import datetime
-from functools import partial
 
-from kivy.uix.screenmanager import Screen
+from kivy.uix.filechooser import FileChooserListView
 from kivymd.material_resources import dp
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.dialog import MDDialog, MDDialogButtonContainer, MDDialogHeadlineText, MDDialogContentContainer
 from kivymd.uix.label import MDLabel
 from kivymd.uix.menu import MDDropdownMenu
-from kivymd.uix.pickers import MDDockedDatePicker, MDModalDatePicker
-from kivymd.uix.dialog import MDDialog, MDDialogButtonContainer, MDDialogHeadlineText, MDDialogContentContainer
-from kivymd.uix.button import MDButton, MDButtonText
-from kivy.uix.filechooser import FileChooserListView
+from kivymd.uix.pickers import MDModalDatePicker
 from kivymd.uix.screen import MDScreen
 
 import database
-import os
-import shutil
 
 
 class AddAnimalScreen(MDScreen):

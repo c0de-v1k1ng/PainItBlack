@@ -1,23 +1,17 @@
-from kivy.uix.screenmanager import Screen
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDButton, MDButtonText
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
-from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
-from kivymd.uix.list import MDList, MDListItem, MDListItemHeadlineText
-from kivymd.uix.button import MDButton, MDButtonText
-from kivy.metrics import dp
-from kivy.utils import get_color_from_hex
-from kivy.properties import ObjectProperty, StringProperty, NumericProperty, ListProperty
+import json
 from datetime import datetime
-from kivymd.uix.progressindicator import MDLinearProgressIndicator  # Updated import
 
+from kivy.metrics import dp
+from kivy.properties import StringProperty, NumericProperty, ListProperty
+from kivy.utils import get_color_from_hex
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
+from kivymd.uix.label import MDLabel
+from kivymd.uix.screen import MDScreen
 
 import database
-import json
-import os
-
 # Import the assessment scales
 from assessment_scales import ASSESSMENT_SCALES
 

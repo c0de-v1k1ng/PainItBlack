@@ -1,13 +1,9 @@
-from kivy.uix.screenmanager import Screen
-from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDButton, MDButtonText
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.card import MDCard
 from kivy.metrics import dp
-from kivy.uix.video import Video
-from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
-from kivymd.uix.list import MDListItem, MDListItemHeadlineText, MDListItemSupportingText
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.card import MDCard
+from kivymd.uix.label import MDLabel
+from kivymd.uix.screen import MDScreen
 
 
 class SpeciesDetailScreen(MDScreen):
@@ -163,7 +159,6 @@ class SpeciesDetailScreen(MDScreen):
         self.video_dialog = None
         self.video_player = None
 
-
     def set_species_info(self, species_name):
         """Update species detail screen with correct data."""
         if not species_name:
@@ -179,11 +174,12 @@ class SpeciesDetailScreen(MDScreen):
             "videos": []
         })
 
-        # Set species image
+        # Set species image with safe image loading
         try:
             self.ids.species_image.source = data.get("image", "assets/images/animal_placeholder.png")
-        except:
-            # Fallback if image loading fails
+        except Exception as e:
+            # Log the error and fallback to placeholder
+            print(f"Error loading image for {species_name}: {e}")
             self.ids.species_image.source = "assets/images/animal_placeholder.png"
 
         # Clear existing widgets before adding new ones
@@ -191,83 +187,122 @@ class SpeciesDetailScreen(MDScreen):
         self.ids.manual_list.clear_widgets()
         self.ids.video_list.clear_widgets()
 
-        # Add assessment scales with better content containment
-        for scale in data["assessment_scales"]:
-            scale_item = MDCard(
-                orientation="vertical",
-                padding=[dp(16), dp(12), dp(16), dp(12)],  # Adjusted padding
-                size_hint_y=None,
-                height=dp(100),  # Increased height to accommodate content
-                size_hint_x=1.0,  # Ensure full width
-                radius=[8, 8, 8, 8],
-                elevation=1,
-                md_bg_color=self.theme_cls.secondaryContainerColor
-            )
+        # Add assessment scales
+        self._add_assessment_scales(data["assessment_scales"])
 
-            # Title with proper containment
-            title_label = MDLabel(
-                text=scale["name"],
-                font_style="Title",
-                role="small",
-                bold=True,
-                halign="center",
-                valign="middle",  # Vertical alignment
-                size_hint_y=None,
-                height=dp(36),  # Fixed height for title
-                adaptive_height=False  # Disable adaptive height to maintain fixed size
-            )
-            scale_item.add_widget(title_label)
+        # Add manuals
+        self._add_manuals(data["manuals"])
 
-            # Description with proper containment
-            desc_label = MDLabel(
-                text=scale["description"],
-                font_style="Body",
-                role="small",
-                halign="center",
-                valign="top",  # Align to top
-                size_hint_y=None,
-                height=dp(64),  # Fixed height for description
-                adaptive_height=False  # Disable adaptive height
-            )
-            scale_item.add_widget(desc_label)
+        # Add videos
+        self._add_videos(data["videos"])
 
-            self.ids.assessment_list.add_widget(scale_item)
-
-        # If no scales are available
-        if not data["assessment_scales"]:
+    def _add_assessment_scales(self, scales):
+        """Add assessment scales to the UI."""
+        if not scales:
             self.ids.assessment_list.add_widget(MDLabel(
                 text="No assessment scales available for this species",
                 halign="center",
                 size_hint_y=None,
                 height=dp(40)
             ))
+            return
 
-        # Add manuals with better content containment
-        for manual in data["manuals"]:
-            manual_item = MDCard(
+        for scale in scales:
+            scale_item = MDCard(
                 orientation="vertical",
                 padding=[dp(16), dp(12), dp(16), dp(12)],
                 size_hint_y=None,
-                height=dp(100),  # Fixed height
-                size_hint_x=1.0,  # Full width
+                height=dp(120),
+                size_hint_x=1.0,
                 radius=[8, 8, 8, 8],
                 elevation=1,
                 md_bg_color=self.theme_cls.secondaryContainerColor
             )
 
-            # Title with fixed height
-            manual_item.add_widget(MDLabel(
-                text=manual["title"],
-                halign="center",
+            # Create a box layout for the title to ensure proper centering
+            title_box = MDBoxLayout(
+                orientation="vertical",
+                size_hint_y=None,
+                height=dp(40),
+                padding=[0, dp(4), 0, dp(4)]
+            )
+
+            title_label = MDLabel(
+                text=scale["name"],
                 font_style="Title",
                 role="small",
                 bold=True,
+                halign="center",
+                valign="center",
+                adaptive_height=True
+            )
+            title_box.add_widget(title_label)
+            scale_item.add_widget(title_box)
+
+            # Create a box layout for the description
+            desc_box = MDBoxLayout(
+                orientation="vertical",
+                size_hint_y=None,
+                height=dp(80),
+                padding=[0, dp(4), 0, dp(4)]
+            )
+
+            desc_label = MDLabel(
+                text=scale["description"],
+                font_style="Body",
+                role="small",
+                halign="center",
+                valign="top",
+                adaptive_height=True
+            )
+            desc_box.add_widget(desc_label)
+            scale_item.add_widget(desc_box)
+
+            self.ids.assessment_list.add_widget(scale_item)
+
+    def _add_manuals(self, manuals):
+        """Add manuals to the UI."""
+        if not manuals:
+            self.ids.manual_list.add_widget(MDLabel(
+                text="No manuals available for this species",
+                halign="center",
+                size_hint_y=None,
+                height=dp(40)
+            ))
+            return
+
+        for manual in manuals:
+            manual_item = MDCard(
+                orientation="vertical",
+                padding=[dp(16), dp(12), dp(16), dp(12)],
+                size_hint_y=None,
+                height=dp(100),
+                size_hint_x=1.0,
+                radius=[8, 8, 8, 8],
+                elevation=1,
+                md_bg_color=self.theme_cls.secondaryContainerColor
+            )
+
+            # Title
+            title_box = MDBoxLayout(
+                orientation="vertical",
                 size_hint_y=None,
                 height=dp(36),
-                adaptive_height=False
-            ))
+                padding=[0, dp(4), 0, dp(4)]
+            )
 
-            # Button container with fixed height
+            title_label = MDLabel(
+                text=manual["title"],
+                font_style="Title",
+                role="small",
+                bold=True,
+                halign="center",
+                adaptive_height=True
+            )
+            title_box.add_widget(title_label)
+            manual_item.add_widget(title_box)
+
+            # Button container
             button_container = MDBoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
@@ -275,7 +310,7 @@ class SpeciesDetailScreen(MDScreen):
                 padding=[0, dp(6), 0, dp(6)]
             )
 
-            # Button centered in container
+            # Create a button with fixed lambda to avoid reference issues
             button = MDButton(
                 style="elevated",
                 on_release=lambda x, link=manual["link"]: self.open_url(link),
@@ -285,55 +320,57 @@ class SpeciesDetailScreen(MDScreen):
             )
             button.add_widget(MDButtonText(text="Open Manual"))
 
-            # Add button to a centered box
-            centered_box = MDBoxLayout(
-                orientation="horizontal",
-                size_hint_x=1.0
-            )
-            centered_box.add_widget(MDBoxLayout(size_hint_x=0.5))
-            centered_box.add_widget(button)
-            centered_box.add_widget(MDBoxLayout(size_hint_x=0.5))
+            # Center the button
+            button_container.add_widget(MDBoxLayout(size_hint_x=0.5))
+            button_container.add_widget(button)
+            button_container.add_widget(MDBoxLayout(size_hint_x=0.5))
 
-            button_container.add_widget(centered_box)
             manual_item.add_widget(button_container)
-
             self.ids.manual_list.add_widget(manual_item)
 
-        # If no manuals are available
-        if not data["manuals"]:
-            self.ids.manual_list.add_widget(MDLabel(
-                text="No manuals available for this species",
+    def _add_videos(self, videos):
+        """Add videos to the UI."""
+        if not videos:
+            self.ids.video_list.add_widget(MDLabel(
+                text="No videos available for this species",
                 halign="center",
                 size_hint_y=None,
                 height=dp(40)
             ))
+            return
 
-        # Videos with better content containment
-        for video in data["videos"]:
+        for video in videos:
             video_item = MDCard(
                 orientation="vertical",
                 padding=[dp(16), dp(12), dp(16), dp(12)],
                 size_hint_y=None,
-                height=dp(100),  # Fixed height
-                size_hint_x=1.0,  # Full width
+                height=dp(100),
+                size_hint_x=1.0,
                 radius=[8, 8, 8, 8],
                 elevation=1,
                 md_bg_color=self.theme_cls.secondaryContainerColor
             )
 
-            # Title with fixed height
-            video_item.add_widget(MDLabel(
+            # Title
+            title_box = MDBoxLayout(
+                orientation="vertical",
+                size_hint_y=None,
+                height=dp(36),
+                padding=[0, dp(4), 0, dp(4)]
+            )
+
+            title_label = MDLabel(
                 text=video["title"],
-                halign="center",
                 font_style="Title",
                 role="small",
                 bold=True,
-                size_hint_y=None,
-                height=dp(36),
-                adaptive_height=False
-            ))
+                halign="center",
+                adaptive_height=True
+            )
+            title_box.add_widget(title_label)
+            video_item.add_widget(title_box)
 
-            # Button container with fixed height
+            # Button container
             button_container = MDBoxLayout(
                 orientation="horizontal",
                 size_hint_y=None,
@@ -341,38 +378,23 @@ class SpeciesDetailScreen(MDScreen):
                 padding=[0, dp(6), 0, dp(6)]
             )
 
-            # Button centered in container
+            # Create a button with fixed lambda to avoid reference issues
             button = MDButton(
                 style="elevated",
-                on_release=lambda x, v=video["url"]: self.open_url(v),
+                on_release=lambda x, url=video["url"]: self.open_url(url),
                 size_hint=(None, None),
                 size=(dp(200), dp(36)),
                 pos_hint={"center_x": 0.5, "center_y": 0.5}
             )
             button.add_widget(MDButtonText(text="Watch Video"))
 
-            # Add button to a centered box
-            centered_box = MDBoxLayout(
-                orientation="horizontal",
-                size_hint_x=1.0
-            )
-            centered_box.add_widget(MDBoxLayout(size_hint_x=0.5))
-            centered_box.add_widget(button)
-            centered_box.add_widget(MDBoxLayout(size_hint_x=0.5))
+            # Center the button
+            button_container.add_widget(MDBoxLayout(size_hint_x=0.5))
+            button_container.add_widget(button)
+            button_container.add_widget(MDBoxLayout(size_hint_x=0.5))
 
-            button_container.add_widget(centered_box)
             video_item.add_widget(button_container)
-
             self.ids.video_list.add_widget(video_item)
-
-        # If no videos are available
-        if not data["videos"]:
-            self.ids.video_list.add_widget(MDLabel(
-                text="No videos available for this species",
-                halign="center",
-                size_hint_y=None,
-                height=dp(40)
-            ))
 
     def open_url(self, url):
         """Open URL in a web browser."""

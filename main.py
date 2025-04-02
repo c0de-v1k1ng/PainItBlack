@@ -1,19 +1,18 @@
 from kivy.lang import Builder
-from kivy.uix.screenmanager import ScreenManager, Screen
 from kivymd.app import MDApp
 from kivymd.theming import ThemeManager
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.textfield import MDTextField
 
 import database
-from screens.home import HomeScreen
-from screens.species_detail import SpeciesDetailScreen
-from screens.my_animals import MyAnimalsScreen
 from screens.add_animal import AddAnimalScreen
-from screens.edit_animal import EditAnimalScreen
-from screens.assessments import AssessmentsScreen
 from screens.animal_detail import AnimalDetailScreen
+from screens.assessments import AssessmentsScreen
 from screens.detailed_assessment import DetailedAssessmentScreen
+from screens.edit_animal import EditAnimalScreen
+from screens.home import HomeScreen
+from screens.my_animals import MyAnimalsScreen
+from screens.species_detail import SpeciesDetailScreen
 
 
 class RootLayout(MDBoxLayout):

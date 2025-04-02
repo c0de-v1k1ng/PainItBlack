@@ -1,10 +1,8 @@
-from kivy.uix.screenmanager import Screen
-from kivymd.app import MDApp
-from kivymd.uix.list import MDList, MDListItem, MDListItemHeadlineText, MDListItemSupportingText
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
 from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
 from kivymd.uix.label import MDLabel
+from kivymd.uix.list import MDListItem, MDListItemHeadlineText, MDListItemSupportingText
+from kivymd.uix.screen import MDScreen
 
 import database
 
@@ -20,11 +18,12 @@ class MyAnimalsScreen(MDScreen):
     def load_animals(self):
         """Load all animals from the database into the list."""
         self.ids.animals_list.clear_widgets()
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, species, breed FROM animals ORDER BY name")
-        animals = cursor.fetchall()
-        conn.close()
+
+        # Use the new database query execution function with 'all' fetch mode
+        animals = database.execute_query(
+            "SELECT id, name, species, breed FROM animals ORDER BY name",
+            fetch_mode='all'
+        )
 
         if not animals:
             # Show empty state

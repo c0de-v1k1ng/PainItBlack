@@ -101,11 +101,14 @@ class EditAnimalScreen(MDScreen):
             {"text": species, "on_release": partial(self.set_species, species)}
             for species in self.species_list
         ]
-        MDDropdownMenu(caller=self.ids.species_dropdown, items=menu_items, width_mult=4).open()
+        self.species_menu = MDDropdownMenu(caller=self.ids.species_dropdown, items=menu_items, width_mult=4)
+        self.species_menu.open()
 
     def set_species(self, species, *args):
         self.selected_species = species
         self.ids.species_dropdown.text = species
+        if hasattr(self, 'species_menu') and self.species_menu:
+            self.species_menu.dismiss()
 
     def show_sex_menu(self):
         """Dropdown for selecting sex."""
@@ -113,11 +116,14 @@ class EditAnimalScreen(MDScreen):
             {"text": gender, "on_release": partial(self.set_sex, gender)}
             for gender in self.sex_options
         ]
-        MDDropdownMenu(caller=self.ids.sex_dropdown, items=menu_items, width_mult=3).open()
+        self.sex_menu = MDDropdownMenu(caller=self.ids.sex_dropdown, items=menu_items, width_mult=3)
+        self.sex_menu.open()
 
     def set_sex(self, gender, *args):
         self.selected_sex = gender
         self.ids.sex_dropdown.text = gender
+        if hasattr(self, 'sex_menu') and self.sex_menu:
+            self.sex_menu.dismiss()
 
     def show_date_picker(self, field_widget):
         if not field_widget.focus:
@@ -215,6 +221,31 @@ class EditAnimalScreen(MDScreen):
             auto_dismiss=False,
         )
         self.file_dialog.open()
+
+    def select_image(self):
+        """Get the selected image from the file chooser and update the preview."""
+        if not self.filechooser_view or not self.filechooser_view.selection:
+            # No file selected
+            self.show_error("Please select an image file.")
+            return
+
+        # Get the selected file path
+        selected_file = self.filechooser_view.selection[0]
+
+        # Check if it's a valid image file
+        if not selected_file.lower().endswith(('.png', '.jpg', '.jpeg')):
+            self.show_error("Please select a valid image file (PNG, JPG, JPEG).")
+            return
+
+        # Update the selected image path
+        self.selected_image_path = selected_file
+
+        # Update the image preview
+        self.ids.photo_preview.source = selected_file
+
+        # Close the file dialog
+        if self.file_dialog:
+            self.file_dialog.dismiss()
 
     def capture_image(self):
         """Capture an image using the camera."""

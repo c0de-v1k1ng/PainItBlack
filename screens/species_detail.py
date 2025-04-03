@@ -29,8 +29,8 @@ class SpeciesDetailScreen(MDScreen):
                 {"title": "Rat Grimace Scale Manual", "link": "https://www.nc3rs.org.uk/rat-grimace-scale"}
             ],
             "videos": [
-                {"title": "Proper Rat Handling", "url": "https://youtu.be/7w-YnH7GRm8"},
-                {"title": "Rat Grimace Scale Guide", "url": "https://youtu.be/LvTWnBo62Sk"}
+                {"title": "Proper Rat Handling", "url": "https://www.youtube.com/watch?v=jIGKgZPMYxI"},
+                {"title": "Rat Grimace Scale Guide", "url": "https://youtu.be/r7-XqOsAROE"}
             ],
         },
         "Mouse": {

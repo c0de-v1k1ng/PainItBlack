@@ -334,7 +334,8 @@ class AssessmentsScreen(MDScreen):
 
         assessment = database.execute_query(
             "SELECT a.date, a.scale_used, a.result, n.name, n.species FROM assessments a JOIN animals n ON a.animal_id = n.id WHERE a.id = ?",
-            fetch_mode='all')
+            (assessment_id,),
+            fetch_mode='one')
 
         if not assessment:
             return
@@ -342,7 +343,11 @@ class AssessmentsScreen(MDScreen):
         # Try to parse JSON result
         result_text = assessment[2]
         try:
+            # DEBUG
+            print(f"trying to parse: {result_text}")
             result_data = json.loads(result_text)
+            print(f"Parsed data: {result_data}")
+
             if isinstance(result_data, dict):
                 # Format JSON content for display
                 content = self.format_assessment_result(result_data, assessment[0], assessment[1], assessment[3],
@@ -400,173 +405,134 @@ class AssessmentsScreen(MDScreen):
 
     def format_assessment_result(self, result_data, date, scale, animal_name, animal_species):
         """Format JSON assessment result for display."""
+        # Create main container
         content = MDBoxLayout(
             orientation="vertical",
             spacing=dp(12),
             padding=[dp(16), dp(16), dp(16), dp(16)],
             adaptive_height=True,
             size_hint_y=None,
-            # Calculate height based on content but ensure minimum height
-            height=dp(400)  # Start with a reasonable height
+            height=dp(500)  # Increased height to fit all content
         )
 
-        # Create a scrollable container for all content to handle overflow
+        # Create scrollable container
         scroll_container = ScrollView(
             size_hint=(1, None),
-            height=dp(360)  # Fixed height for scroll area
+            height=dp(400)  # Increased height for scroll view
         )
 
+        # Create content inside scroll view
         scroll_content = MDBoxLayout(
             orientation="vertical",
             spacing=dp(12),
             adaptive_height=True,
-            size_hint_y=None
+            size_hint_y=None,
+            height=dp(800)  # Make sure this is tall enough for content
         )
 
-        # Add animal and scale info
-        info_box = MDBoxLayout(
+        # Add header information (outside the scroll view)
+        header = MDBoxLayout(
             orientation="vertical",
             spacing=dp(4),
-            adaptive_height=True,
-            size_hint_y=None
+            size_hint_y=None,
+            height=dp(80)
         )
 
-        info_box.add_widget(MDLabel(
+        header.add_widget(MDLabel(
             text=f"Animal: {animal_name} ({animal_species})",
-            adaptive_height=True,
             size_hint_y=None,
             height=dp(24)
         ))
 
-        info_box.add_widget(MDLabel(
+        header.add_widget(MDLabel(
             text=f"Date: {date}",
-            adaptive_height=True,
             size_hint_y=None,
             height=dp(24)
         ))
 
-        info_box.add_widget(MDLabel(
+        header.add_widget(MDLabel(
             text=f"Assessment Scale: {scale}",
-            adaptive_height=True,
             size_hint_y=None,
             height=dp(24)
         ))
 
-        scroll_content.add_widget(info_box)
+        content.add_widget(header)
 
-        # Add divider
-        divider = MDBoxLayout(
-            size_hint_y=None,
-            height=dp(1),
-            md_bg_color=get_color_from_hex("#CCCCCC")
-        )
-        scroll_content.add_widget(divider)
-
-        # Add score and interpretation if available
-        if "score" in result_data or "interpretation" in result_data:
-            result_box = MDBoxLayout(
+        # Add score and interpretation
+        if "score" in result_data and "interpretation" in result_data:
+            score_box = MDBoxLayout(
                 orientation="vertical",
                 spacing=dp(4),
-                adaptive_height=True,
-                size_hint_y=None
+                size_hint_y=None,
+                height=dp(60)
             )
 
-            if "score" in result_data:
-                result_box.add_widget(MDLabel(
-                    text=f"Score: {result_data['score']}",
-                    font_style="Title",
-                    role="medium",
-                    adaptive_height=True,
-                    size_hint_y=None,
-                    height=dp(30)
-                ))
-
-            if "interpretation" in result_data:
-                # Get appropriate color based on interpretation text
-                color = get_color_from_hex("#4CAF50")  # Default green
-                if "moderate" in result_data["interpretation"].lower():
-                    color = get_color_from_hex("#FF9800")  # Orange
-                elif "severe" in result_data["interpretation"].lower() or "urgent" in result_data[
-                    "interpretation"].lower():
-                    color = get_color_from_hex("#F44336")  # Red
-
-                result_box.add_widget(MDLabel(
-                    text=f"Result: {result_data['interpretation']}",
-                    font_style="Title",
-                    role="small",
-                    theme_text_color="Custom",
-                    text_color=color,
-                    adaptive_height=True,
-                    size_hint_y=None,
-                    height=dp(30)
-                ))
-
-            scroll_content.add_widget(result_box)
-
-            # Add another divider
-            scroll_content.add_widget(MDBoxLayout(
+            score_box.add_widget(MDLabel(
+                text=f"Score: {result_data['score']}",
+                font_style="Title",
+                role="medium",
                 size_hint_y=None,
-                height=dp(1),
-                md_bg_color=get_color_from_hex("#CCCCCC")
+                height=dp(30)
             ))
 
-        # Add details if available
+            # Color based on interpretation
+            color = get_color_from_hex("#4CAF50")  # Default green
+            if "moderate" in result_data["interpretation"].lower():
+                color = get_color_from_hex("#FF9800")  # Orange
+            elif "severe" in result_data["interpretation"].lower():
+                color = get_color_from_hex("#F44336")  # Red
+
+            score_box.add_widget(MDLabel(
+                text=f"Result: {result_data['interpretation']}",
+                theme_text_color="Custom",
+                text_color=color,
+                size_hint_y=None,
+                height=dp(30)
+            ))
+
+            scroll_content.add_widget(score_box)
+
+        # Add details section
         if "details" in result_data and isinstance(result_data["details"], list):
             details_label = MDLabel(
                 text="Assessment Details:",
                 font_style="Title",
                 role="small",
-                adaptive_height=True,
                 size_hint_y=None,
                 height=dp(40)
             )
             scroll_content.add_widget(details_label)
 
+            # Add each detail item
             for detail in result_data["details"]:
-                if isinstance(detail, dict):
-                    detail_box = MDCard(
+                if isinstance(detail, dict) and "question" in detail and "answer" in detail:
+                    detail_card = MDCard(
                         orientation="vertical",
-                        adaptive_height=True,
                         size_hint_y=None,
                         height=dp(80),
-                        padding=[dp(12), dp(8), dp(12), dp(8)],
-                        margin=dp(4),
-                        elevation=1
+                        padding=dp(10),
                     )
 
-                    if "question" in detail:
-                        question_label = MDLabel(
-                            text=detail["question"],
-                            font_style="Body",
-                            role="medium",
-                            adaptive_height=True,
-                            size_hint_y=None,
-                            height=dp(24)
-                        )
-                        detail_box.add_widget(question_label)
-
-                    if "answer" in detail:
-                        answer_text = f"Answer: {detail['answer']}"
-                        if "score" in detail:
-                            answer_text += f" (Score: {detail['score']})"
-
-                        answer_label = MDLabel(
-                            text=answer_text,
-                            font_style="Body",
-                            role="small",
-                            adaptive_height=True,
-                            size_hint_y=None,
-                            height=dp(24)
-                        )
-                        detail_box.add_widget(answer_label)
-
-                    scroll_content.add_widget(detail_box)
-
-                    # Add spacing after each detail item
-                    scroll_content.add_widget(MDBoxLayout(
+                    question_label = MDLabel(
+                        text=detail["question"],
+                        bold=True,
                         size_hint_y=None,
-                        height=dp(4)
-                    ))
+                        height=dp(30)
+                    )
+                    detail_card.add_widget(question_label)
+
+                    answer_text = f"Answer: {detail['answer']}"
+                    if "score" in detail:
+                        answer_text += f" (Score: {detail['score']})"
+
+                    answer_label = MDLabel(
+                        text=answer_text,
+                        size_hint_y=None,
+                        height=dp(30)
+                    )
+                    detail_card.add_widget(answer_label)
+
+                    scroll_content.add_widget(detail_card)
 
         # Add the scroll content to the scroll container
         scroll_container.add_widget(scroll_content)

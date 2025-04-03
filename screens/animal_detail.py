@@ -103,6 +103,10 @@ class AnimalDetailScreen(MDScreen):
         """Load and display weight history."""
         self.ids.weight_history_container.clear_widgets()
 
+        # always clear graph container!
+        if hasattr(self.ids, 'weight_graph_container'):
+            self.ids.weight_graph_container.clear_widgets()
+
         # Clear any existing weight data
         self.weight_data = []
 
@@ -684,7 +688,7 @@ class AnimalDetailScreen(MDScreen):
 
             clickable_box.bind(
                 on_touch_down=lambda inst, touch, aid=assessment_id, anid=self.animal_id: (
-                    app.screen_manager.get_screen("assessments").show_assessment_details(aid, anid)
+                    self.show_assessment_details(aid,anid)
                     if inst.collide_point(*touch.pos) and not touch.is_double_tap else None
                 )
             )
@@ -720,6 +724,12 @@ class AnimalDetailScreen(MDScreen):
             ),
         )
         self.dialog.open()
+
+    def show_assessment_details(self,assessment_id, animal_id):
+        """Forward to the assessment screen to show details"""
+        app = MDApp.get_running_app()
+        assessments_screen = app.screen_manager.get_screen("assessments")
+        assessments_screen.show_assessment_details(assessment_id, animal_id)
 
     def show_error_dialog(self, message):
         """Display an error dialog with the provided message."""

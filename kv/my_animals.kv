@@ -1,5 +1,5 @@
 <MyAnimalsScreen@MDScreen>:
-    md_bg_color: self.theme_cls.backgroundColor  # ✅ Fix
+    md_bg_color: self.theme_cls.backgroundColor
 
     MDBoxLayout:
         orientation: "vertical"
@@ -11,12 +11,18 @@
                 text: "My Animals"
                 pos_hint: {"center_x": .5}
 
+            MDTopAppBarTrailingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "select-multiple"
+                    on_release: root.toggle_selection_mode()
+
         ScrollView:
             MDList:
                 id: animals_list
 
         MDFabButton:
+            id: fab_add
             icon: "plus"
             style: "standard"
             pos_hint: {"center_x": 0.9, "center_y": 0.1}
-            on_release: app.switch_screen('add_animal')
+            on_release: app.switch_screen('add_animal') if not root.is_selection_mode else root.toggle_selection_mode()

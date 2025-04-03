@@ -15,6 +15,8 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
 
+from managers.export_manager import ExportManager
+
 import database
 
 
@@ -858,3 +860,120 @@ class AnimalDetailScreen(MDScreen):
             self.show_success_dialog("Weight record deleted successfully.")
         else:
             self.show_error_dialog("Failed to delete weight record.")
+
+    # Inside the AnimalDetailScreen class, add:
+    def show_export_options(self):
+        """Show export options dialog."""
+        if not self.animal_id:
+            return
+
+        self.export_dialog = MDDialog(
+            MDDialogHeadlineText(text="Export Options"),
+            MDDialogContentContainer(
+                MDLabel(text="Select export format:")
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="PDF"),
+                    style="text",
+                    on_release=lambda x: self.export_animal("pdf")
+                ),
+                MDButton(
+                    MDButtonText(text="CSV"),
+                    style="text",
+                    on_release=lambda x: self.export_animal("csv")
+                ),
+                MDButton(
+                    MDButtonText(text="Cancel"),
+                    style="text",
+                    on_release=lambda x: self.export_dialog.dismiss()
+                ),
+                spacing="8dp"
+            ),
+            auto_dismiss=True
+        )
+        self.export_dialog.open()
+
+    def export_animal(self, format_type):
+        """Export animal data in the selected format."""
+        self.export_dialog.dismiss()
+
+        # Show loading indicator
+        self.show_loading_dialog("Exporting...")
+
+        # Run export in a separate thread to keep UI responsive
+        def export_thread():
+            export_manager = ExportManager()
+
+            try:
+                if format_type == "pdf":
+                    filename = export_manager.export_animal_to_pdf(self.animal_id)
+                    # Use Clock.schedule_once to update UI from the main thread
+                    from kivy.clock import Clock
+                    if filename:
+                        Clock.schedule_once(
+                            lambda dt: self.show_success_dialog(f"Exported to PDF:\n{os.path.basename(filename)}"), 0
+                        )
+                    else:
+                        Clock.schedule_once(
+                            lambda dt: self.show_error_dialog("Failed to export animal data"), 0
+                        )
+                elif format_type == "csv":
+                    filenames = export_manager.export_animal_to_csv(self.animal_id)
+                    from kivy.clock import Clock
+                    if filenames:
+                        Clock.schedule_once(
+                            lambda dt: self.show_success_dialog(
+                                f"Exported to CSV files:\n{', '.join([os.path.basename(f) for f in filenames])}"), 0
+                        )
+                    else:
+                        Clock.schedule_once(
+                            lambda dt: self.show_error_dialog("Failed to export animal data"), 0
+                        )
+            finally:
+                # Dismiss loading dialog
+                from kivy.clock import Clock
+                Clock.schedule_once(lambda dt: self.loading_dialog.dismiss(), 0.5)
+
+        # Start the export thread
+        from threading import Thread
+        thread = Thread(target=export_thread)
+        thread.daemon = True
+        thread.start()
+
+    def show_loading_dialog(self, message):
+        """Show a loading dialog."""
+        from kivymd.uix.progressindicator import MDCircularProgressIndicator
+        from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer
+
+        # Create a container for the spinner and message
+        content = MDBoxLayout(
+            orientation="vertical",
+            spacing="16dp",
+            adaptive_height=True,
+            padding=["20dp", "20dp", "20dp", "20dp"]
+        )
+
+        # Add spinner
+        spinner = MDCircularProgressIndicator()
+        spinner_box = MDBoxLayout(
+            adaptive_size=True,
+            pos_hint={"center_x": 0.5}
+        )
+        spinner_box.add_widget(spinner)
+        content.add_widget(spinner_box)
+
+        # Add message
+        content.add_widget(MDLabel(
+            text=message,
+            halign="center",
+            adaptive_height=True
+        ))
+
+        # Create the dialog with proper structure
+        self.loading_dialog = MDDialog(
+            MDDialogHeadlineText(text="Please Wait"),
+            MDDialogContentContainer(content),
+            auto_dismiss=False
+        )
+        self.loading_dialog.open()

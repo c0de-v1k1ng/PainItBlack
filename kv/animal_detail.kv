@@ -20,6 +20,9 @@
                 MDActionTopAppBarButton:
                     icon: "pencil"
                     on_release: app.edit_animal(root.animal_id)
+                MDActionTopAppBarButton:
+                    icon: "export"
+                    on_release: root.show_export_options()
 
         ScrollView:
             MDBoxLayout:

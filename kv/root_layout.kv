@@ -26,7 +26,8 @@
                     icon: "home"
 
                 MDNavigationRailItemLabel:
-                    text: "Home"
+                    id: home_label
+                    text: app.translator.translate('navigation', 'home')
 
             # My Animals
             MDNavigationRailItem:
@@ -37,7 +38,8 @@
                     icon: "paw"
 
                 MDNavigationRailItemLabel:
-                    text: "Animals"
+                    id: animals_label
+                    text: app.translator.translate('navigation', 'animals')
 
             # Assessments
             MDNavigationRailItem:
@@ -48,9 +50,10 @@
                     icon: "clipboard-list"
 
                 MDNavigationRailItemLabel:
-                    text: "Assessments"
+                    id: assessments_label
+                    text: app.translator.translate('navigation', 'assessments')
 
-            # Settings (optional)
+            # Theme toggle
             MDNavigationRailItem:
                 id: nav_settings
                 on_release: app.toggle_theme()
@@ -59,7 +62,19 @@
                     icon: "theme-light-dark"
 
                 MDNavigationRailItemLabel:
-                    text: "Theme"
+                    id: theme_toggle_label
+                    text: app.translator.translate('navigation', 'theme')
+
+            # Language selector
+            MDNavigationRailItem:
+                id: nav_language
+                on_release: app.show_language_menu(self)
+
+                MDNavigationRailItemIcon:
+                    icon: "translate"
+
+                MDNavigationRailItemLabel:
+                    text: app.translator.translate('common', 'language')
 
         # Content area on the right
         MDBoxLayout:

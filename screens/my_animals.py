@@ -5,6 +5,7 @@ from kivymd.uix.button import MDButton, MDButtonText
 from kivymd.uix.dialog import MDDialog, MDDialogHeadlineText, MDDialogContentContainer, MDDialogButtonContainer
 from kivymd.uix.label import MDLabel
 from kivymd.uix.list import MDListItem, MDListItemHeadlineText, MDListItemSupportingText
+from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.selectioncontrol import MDCheckbox
 
@@ -22,11 +23,16 @@ class MyAnimalsScreen(MDScreen):
         self.loading_dialog = None
 
     def on_enter(self):
+        self.load_species_list()
         self.load_animals()
 
     def load_animals(self):
         """Load all animals from the database into the list."""
-        self.ids.animals_list.clear_widgets()
+        # Reset filters when reloading all animals
+        if hasattr(self.ids, 'search_field'):
+            self.ids.search_field.text = ""
+        if hasattr(self.ids, 'species_filter'):
+            self.ids.species_filter.text = ""
 
         # Use the database query execution function with 'all' fetch mode
         animals = database.execute_query(
@@ -34,50 +40,8 @@ class MyAnimalsScreen(MDScreen):
             fetch_mode='all'
         )
 
-        if not animals:
-            # Show empty state
-            item = MDListItem()
-            item.add_widget(MDListItemHeadlineText(text="No animals added yet"))
-            self.ids.animals_list.add_widget(item)
-            return
-
-        self.list_items = []
-
-        for animal in animals:
-            animal_id = animal[0]
-            item = MDListItem(
-                on_release=lambda x, a_id=animal_id: self.view_animal(a_id) if not self.is_selection_mode else None
-            )
-
-            # Add checkbox for selection mode
-            if self.is_selection_mode:
-
-
-                checkbox = MDCheckbox(
-                    size_hint=(None, None),
-                    size=("48dp", "48dp"),
-                    pos_hint={"center_y": 0.5},
-                    active=animal_id in self.selected_animals
-                )
-                checkbox.bind(active=lambda cb, value, aid=animal_id: self.on_animal_select(aid, cb))
-                item.add_widget(checkbox)
-
-            # Add headline text (name and species)
-            item.add_widget(MDListItemHeadlineText(text=f"{animal[1]} ({animal[2]})"))
-
-            # Add supporting text (breed if available)
-            if animal[3]:
-                item.add_widget(MDListItemSupportingText(text=f"Breed: {animal[3]}"))
-
-            # Add long press gesture for export menu
-            if not self.is_selection_mode:
-                detector = LongPressDetector(
-                    item,
-                    lambda widget, touch, aid=animal_id: self.show_animal_options(aid)
-                )
-                self.list_items.append((item, detector))
-
-            self.ids.animals_list.add_widget(item)
+        # Let update_animals_list handle everything else
+        self.update_animals_list(animals)
 
     def view_animal(self, animal_id):
         """Navigate to the animal detail screen."""
@@ -202,9 +166,9 @@ class MyAnimalsScreen(MDScreen):
                             # Ignore errors if it doesn't exist
                             pass
 
-    def on_animal_select(self, animal_id, checkbox):
+    def on_animal_select(self, animal_id, is_active):
         """Handle animal selection/deselection."""
-        if checkbox.active:
+        if is_active:
             if animal_id not in self.selected_animals:
                 self.selected_animals.append(animal_id)
         else:
@@ -466,3 +430,125 @@ class MyAnimalsScreen(MDScreen):
         thread = Thread(target=export_thread)
         thread.daemon = True
         thread.start()
+
+    def load_species_list(self):
+        """Load list of species for filtering."""
+        self.species_list = database.execute_query(
+            "SELECT DISTINCT species FROM animals ORDER BY species",
+            fetch_mode='all'
+        ) or []
+        self.species_list = [species[0] for species in self.species_list]
+        # Add "All" option at the beginning
+        self.species_list.insert(0, "All Species")
+
+    def show_species_filter_menu(self):
+        """Show dropdown menu for species filtering."""
+        menu_items = [
+            {"text": species, "on_release": lambda x=species: self.select_species_filter(x)}
+            for species in self.species_list
+        ]
+
+        self.species_menu = MDDropdownMenu(
+            caller=self.ids.species_filter,
+            items=menu_items,
+            width_mult=4,
+            position="bottom"
+        )
+        self.species_menu.open()
+
+    def select_species_filter(self, species):
+        """Apply species filter."""
+        if species == "All Species":
+            self.ids.species_filter.text = ""
+        else:
+            self.ids.species_filter.text = species
+
+        if hasattr(self, 'species_menu') and self.species_menu:
+            self.species_menu.dismiss()
+
+        self.filter_animals()
+
+    def filter_animals(self, *args):
+        """Filter animals based on search text and species."""
+        search_text = self.ids.search_field.text.strip().lower()
+        species_filter = self.ids.species_filter.text
+
+        # Build query conditions
+        query = "SELECT id, name, species, breed FROM animals"
+        params = []
+        conditions = []
+
+        if search_text:
+            conditions.append("(LOWER(name) LIKE ? OR LOWER(id) LIKE ?)")
+            params.extend([f"%{search_text}%", f"%{search_text}%"])
+
+        if species_filter and species_filter != "All Species":
+            conditions.append("species = ?")
+            params.append(species_filter)
+
+        # Add WHERE clause if there are conditions
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY name"
+
+        # Execute query with parameters
+        animals = database.execute_query(query, params, fetch_mode='all') or []
+
+        # Update the UI with filtered results
+        self.update_animals_list(animals)
+
+    # In both screens/my_animals.py and screens/assessments.py
+    def clear_filters(self):
+        """Clear all applied filters."""
+        self.ids.search_field.text = ""
+        self.ids.species_filter.text = ""
+        self.load_animals()  # or self.load_assessments() for the assessments screen
+
+    def update_animals_list(self, animals):
+        """Update the list display with filtered animals."""
+        self.ids.animals_list.clear_widgets()
+
+        if not animals:
+            # Show empty state
+            item = MDListItem()
+            item.add_widget(MDListItemHeadlineText(text="No animals match the filter criteria"))
+            self.ids.animals_list.add_widget(item)
+            return
+
+        self.list_items = []
+
+        # Same code as in load_animals but using the filtered animals data
+        for animal in animals:
+            animal_id = animal[0]
+            item = MDListItem(
+                on_release=lambda x, a_id=animal_id: self.view_animal(a_id) if not self.is_selection_mode else None
+            )
+
+            # Add checkbox for selection mode
+            if self.is_selection_mode:
+                checkbox = MDCheckbox(
+                    size_hint=(None, None),
+                    size=("48dp", "48dp"),
+                    pos_hint={"center_y": 0.5},
+                    active=animal_id in self.selected_animals
+                )
+                checkbox.bind(active=lambda cb, value, aid=animal_id: self.on_animal_select(aid, value))
+                item.add_widget(checkbox)
+
+            # Add headline text (name and species)
+            item.add_widget(MDListItemHeadlineText(text=f"{animal[1]} ({animal[2]})"))
+
+            # Add supporting text (breed if available)
+            if animal[3]:
+                item.add_widget(MDListItemSupportingText(text=f"Breed: {animal[3]}"))
+
+            # Add long press gesture for export menu
+            if not self.is_selection_mode:
+                detector = LongPressDetector(
+                    item,
+                    lambda widget, touch, aid=animal_id: self.show_animal_options(aid)
+                )
+                self.list_items.append((item, detector))
+
+            self.ids.animals_list.add_widget(item)

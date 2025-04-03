@@ -16,6 +16,36 @@
                     icon: "select-multiple"
                     on_release: root.toggle_selection_mode()
 
+        # In kv/my_animals.kv - Add these UI elements just after the TopAppBar
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "56dp"
+            padding: "8dp"
+            spacing: "8dp"
+
+            MDTextField:
+                id: search_field
+                mode: "outlined"
+                size_hint_x: 0.6
+                on_text: root.filter_animals()
+                MDTextFieldHintText:
+                    text: "Search by ID/Name"
+
+            MDTextField:
+                id: species_filter
+                mode: "outlined"
+                size_hint_x: 0.4
+                readonly: True
+                on_focus: root.show_species_filter_menu() if self.focus else None
+                MDTextFieldHintText:
+                    text: "Species"
+
+            MDIconButton:
+                icon: "filter-remove"
+                pos_hint: {"center_y": 0.5}
+                on_release: root.clear_filters()
+
         ScrollView:
             MDList:
                 id: animals_list

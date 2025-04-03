@@ -43,30 +43,92 @@ class AssessmentsScreen(MDScreen):
 
     def on_enter(self):
         """Refresh assessments when entering the screen."""
+        self.load_species_list()
         self.load_assessments()
 
-    def load_assessments(self):
-        """Load all assessments into the list."""
-        self.ids.assessments_list.clear_widgets()
-
-        assessments = database.execute_query(
-            """
-            SELECT a.id, a.date, a.scale_used, a.result, n.name, n.species, a.animal_id
-            FROM assessments a
-            JOIN animals n ON a.animal_id = n.id
-            ORDER BY a.date DESC
-            """,
+    def load_species_list(self):
+        """Load list of species for filtering."""
+        self.species_list = database.execute_query(
+            """SELECT DISTINCT n.species FROM assessments a 
+               JOIN animals n ON a.animal_id = n.id 
+               ORDER BY n.species""",
             fetch_mode='all'
+        ) or []
+        self.species_list = [species[0] for species in self.species_list]
+        # Add "All" option at the beginning
+        self.species_list.insert(0, "All Species")
+
+    def show_species_filter_menu(self):
+        """Show dropdown menu for species filtering."""
+        menu_items = [
+            {"text": species, "on_release": lambda x=species: self.select_species_filter(x)}
+            for species in self.species_list
+        ]
+
+        self.species_menu = MDDropdownMenu(
+            caller=self.ids.species_filter,
+            items=menu_items,
+            width_mult=4,
+            position="bottom"
         )
+        self.species_menu.open()
+
+    def select_species_filter(self, species):
+        """Apply species filter."""
+        if species == "All Species":
+            self.ids.species_filter.text = ""
+        else:
+            self.ids.species_filter.text = species
+
+        if hasattr(self, 'species_menu') and self.species_menu:
+            self.species_menu.dismiss()
+
+        self.filter_assessments()
+
+    def filter_assessments(self, *args):
+        """Filter assessments based on search text and species."""
+        search_text = self.ids.search_field.text.strip().lower()
+        species_filter = self.ids.species_filter.text
+
+        # Build query conditions
+        query = """SELECT a.id, a.date, a.scale_used, a.result, n.name, n.species, a.animal_id
+                   FROM assessments a
+                   JOIN animals n ON a.animal_id = n.id"""
+        params = []
+        conditions = []
+
+        if search_text:
+            conditions.append("(LOWER(n.name) LIKE ? OR LOWER(a.animal_id) LIKE ?)")
+            params.extend([f"%{search_text}%", f"%{search_text}%"])
+
+        if species_filter and species_filter != "All Species":
+            conditions.append("n.species = ?")
+            params.append(species_filter)
+
+        # Add WHERE clause if there are conditions
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
+        query += " ORDER BY a.date DESC"
+
+        # Execute query with parameters
+        assessments = database.execute_query(query, params, fetch_mode='all') or []
+
+        # Update the UI with filtered results
+        self.update_assessments_list(assessments)
+
+    def update_assessments_list(self, assessments):
+        """Update the list display with filtered assessments."""
+        self.ids.assessments_list.clear_widgets()
 
         if not assessments:
             # Show empty state
             empty_item = MDListItem()
-            empty_item.add_widget(MDListItemHeadlineText(text="No assessments recorded"))
+            empty_item.add_widget(MDListItemHeadlineText(text="No assessments match the filter criteria"))
             self.ids.assessments_list.add_widget(empty_item)
             return
 
-        # Add assessments to the list
+        # Add assessments to the list - same code as in load_assessments but using filtered data
         for assessment in assessments:
             a_id = assessment[0]
             animal_id = assessment[6]
@@ -86,6 +148,7 @@ class AssessmentsScreen(MDScreen):
             item = MDListItem(
                 on_release=partial(self.on_assessment_item_click, a_id, animal_id)
             )
+
             # Add headline text (date)
             item.add_widget(MDListItemHeadlineText(text=assessment[1]))  # Date
 
@@ -97,6 +160,33 @@ class AssessmentsScreen(MDScreen):
             item.add_widget(MDListItemSupportingText(text=result_display))
 
             self.ids.assessments_list.add_widget(item)
+
+    def load_assessments(self):
+        """Load all assessments into the list."""
+        # Reset filters when reloading all assessments
+        if hasattr(self.ids, 'search_field'):
+            self.ids.search_field.text = ""
+        if hasattr(self.ids, 'species_filter'):
+            self.ids.species_filter.text = ""
+
+        assessments = database.execute_query(
+            """
+            SELECT a.id, a.date, a.scale_used, a.result, n.name, n.species, a.animal_id
+            FROM assessments a
+            JOIN animals n ON a.animal_id = n.id
+            ORDER BY a.date DESC
+            """,
+            fetch_mode='all'
+        )
+
+        self.update_assessments_list(assessments)
+
+    # In both screens/my_animals.py and screens/assessments.py
+    def clear_filters(self):
+        """Clear all applied filters."""
+        self.ids.search_field.text = ""
+        self.ids.species_filter.text = ""
+        self.load_assessments()
 
     def on_assessment_item_click(self, assessment_id, animal_id, instance):
         """Handle assessment item click event"""
